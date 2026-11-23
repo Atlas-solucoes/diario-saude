@@ -1,0 +1,6 @@
+{
+  "name": "atlas-saude-api",
+  "private": true,
+  "type": "module",
+  "description": "Servidor da família do Diário de Saúde (Cloudflare Worker + D1). Testes: node --test ../../../tests/diario-saude/worker.test.mjs"
+}

@@ -1,0 +1,30 @@
+# Diário de Saúde (Atlas Saúde): servidor da família. Publicado pelo GitHub Actions do repo Atlas-solucoes/diario-saude.
+# Segredos (CODIGO_INICIAL) NUNCA ficam aqui: entram pela Action. database_id não é segredo.
+name = "atlas-saude-api"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+preview_urls = false
+
+[vars]
+ORIGEM = "https://atlas-solucoes.github.io"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "atlas-saude"
+database_id = "08784046-8988-4a70-bd31-8f6f8c18eb1a"
+migrations_dir = "migracoes"
+
+# Servidor de TESTE: outro Worker e outro banco. O código inicial dele é sorteado a cada teste automático.
+[env.teste]
+name = "atlas-saude-api-teste"
+workers_dev = true
+
+[env.teste.vars]
+ORIGEM = "https://atlas-solucoes.github.io"
+
+[[env.teste.d1_databases]]
+binding = "DB"
+database_name = "atlas-saude-teste"
+database_id = "a0b022fd-6d04-42bd-aed6-c78bf4806237"
+migrations_dir = "migracoes"

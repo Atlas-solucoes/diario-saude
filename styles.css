@@ -82,3 +82,7 @@ a.cuidando { display: flex; align-items: center; gap: 12px; min-height: 64px; ma
 .quem-nome { font-size: 22px; font-weight: 700; }
 .alerta { background: #fff3cd; border: 2px solid #b88700; border-radius: 12px; padding: 10px; color: #3d2f00; font-weight: 600; }
 nav a { font-size: 13px; }
+
+/* Etapa C */
+.estado-sync { font-size: 16px; font-weight: 600; color: #1b4965; }
+.convite { margin-top: 10px; }

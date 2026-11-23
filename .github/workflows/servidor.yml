@@ -1,0 +1,83 @@
+# Servidor da família (Cloudflare Worker + D1). Fonte: Atlas-solucoes/atlas-star, projetos/diario-saude/ (esta é uma cópia).
+# Repo PÚBLICO: só roda com push na main ou disparo manual (nunca pull_request). Segredos só pelo GitHub.
+name: Servidor da família
+on:
+  push:
+    branches: [main]
+    paths: ['worker/**', 'teste-real.mjs', '.github/workflows/servidor.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: servidor-da-familia
+  cancel-in-progress: false
+env:
+  WRANGLER: npx --yes wrangler@4.166.0
+  WRANGLER_SEND_METRICS: "false"
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+jobs:
+  teste:
+    name: Teste no Cloudflare de verdade (Worker e banco de TESTE)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults: { run: { working-directory: worker, shell: bash } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Conferir segredos
+        env: { CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}" }
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "Falta o segredo CLOUDFLARE_API_TOKEN"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "Falta o segredo CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+      - name: Banco de teste (migrações e limpeza)
+        env: { CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}" }
+        run: |
+          $WRANGLER d1 migrations apply atlas-saude-teste --remote --env teste
+          $WRANGLER d1 execute atlas-saude-teste --remote --env teste --yes --command "DELETE FROM registros; DELETE FROM historico; DELETE FROM aparelhos; DELETE FROM convites; DELETE FROM tentativas; DELETE FROM reivindicacoes; DELETE FROM familia; DELETE FROM foto; UPDATE contador SET seq = 0;"
+      - name: Publicar o Worker de teste com um código sorteado agora
+        env: { CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}" }
+        run: |
+          trap 'rm -f /tmp/segredos.json' EXIT
+          CODIGO=$(openssl rand -hex 24); echo "::add-mask::$CODIGO"; echo "CODIGO_TESTE=$CODIGO" >> "$GITHUB_ENV"
+          printf '{"CODIGO_INICIAL":"%s"}' "$CODIGO" > /tmp/segredos.json
+          $WRANGLER deploy --env teste --secrets-file /tmp/segredos.json | tee /tmp/deploy.txt
+          rm -f /tmp/segredos.json
+          URL=$(grep -oE 'https://atlas-saude-api-teste\.[a-z0-9-]+\.workers\.dev' /tmp/deploy.txt | head -1)
+          test -n "$URL" || { echo "Não achei o endereço workers.dev do Worker de teste"; exit 1; }
+          echo "API_TESTE=$URL" >> "$GITHUB_ENV"
+      - name: Teste completo (2 celulares, convite, sync, conflito, foto, desconectar)
+        run: sleep 5 && node ../teste-real.mjs
+      - name: Apagar os dados de teste
+        if: always()
+        env: { CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}" }
+        run: $WRANGLER d1 execute atlas-saude-teste --remote --env teste --yes --command "DELETE FROM registros; DELETE FROM historico; DELETE FROM aparelhos; DELETE FROM convites; DELETE FROM tentativas; DELETE FROM reivindicacoes; DELETE FROM familia; DELETE FROM foto; UPDATE contador SET seq = 0;"
+
+  producao:
+    name: Publicar o servidor da família
+    needs: teste
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults: { run: { working-directory: worker, shell: bash } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Conferir o código inicial (24+ caracteres; o valor nunca aparece no log)
+        env: { CODIGO: "${{ secrets.DIARIO_CODIGO_INICIAL }}" }
+        run: |
+          [ ${#CODIGO} -ge 24 ] || { echo "O segredo DIARIO_CODIGO_INICIAL precisa ter pelo menos 24 caracteres"; exit 1; }
+      - name: Banco da família (migrações; só acrescentam)
+        env: { CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}" }
+        run: $WRANGLER d1 migrations apply atlas-saude --remote
+      - name: Publicar
+        env: { CODIGO: "${{ secrets.DIARIO_CODIGO_INICIAL }}", CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}" }
+        run: |
+          trap 'rm -f /tmp/segredos.json' EXIT
+          node -e 'require("fs").writeFileSync("/tmp/segredos.json", JSON.stringify({CODIGO_INICIAL: process.env.CODIGO}))'
+          $WRANGLER deploy --secrets-file /tmp/segredos.json | tee /tmp/deploy.txt
+          rm -f /tmp/segredos.json
+          URL=$(grep -oE 'https://atlas-saude-api\.[a-z0-9-]+\.workers\.dev' /tmp/deploy.txt | head -1)
+          test -n "$URL" || { echo "Não achei o endereço workers.dev do servidor da família"; exit 1; }
+          echo "Endereço do servidor da família: $URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "ENDERECO=$URL"

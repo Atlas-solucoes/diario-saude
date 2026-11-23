@@ -16,6 +16,7 @@
   var ID_PESSOA = /^[a-z0-9_-]{1,40}$/;
   var ARQ_TIPOS = ['foto', 'documento'];
   var ARQ_MAX = 5 * 1024 * 1024;
+  var Regras = (typeof module !== 'undefined' && module.exports) ? require('./regras.js') : root.DiarioRegras;
 
   function novoId() {
     var c = root.crypto;
@@ -141,6 +142,7 @@
         validar(r);
         r.versao += 1; r.atualizadoEm = agora(); r.sincronizado = false;
         r.modeloVersao = VERSAO_MODELO;
+        delete r.rejeitado; // editou: tenta enviar de novo
         await backend.put('registros', r);
         await enfileirar(r, 'salvar');
         return r;
@@ -250,6 +252,38 @@
           var todos = await backend.getAll(lojas[i]);
           for (var k = 0; k < todos.length; k++) await backend.delete(lojas[i], todos[k].id);
         }
+      },
+      /* Etapa C (família conectada). O que veio do servidor substitui o local, EXCETO se o local ainda está na fila e vence
+         pela regra única (regras.js). Ao substituir, sai da fila. Nunca recoloca na fila. Devolve true se gravou. */
+      aplicarRemoto: async function (remoto) {
+        var local = await backend.get('registros', remoto.id);
+        var naFila = local ? await backend.get('fila', remoto.id) : null;
+        if (local && Regras.mesma(local, remoto)) {
+          if (naFila && naFila.versao === local.versao) await backend.delete('fila', remoto.id);
+          if (!local.sincronizado) { local.sincronizado = true; await backend.put('registros', local); }
+          return false;
+        }
+        if (local && naFila && !Regras.vence(remoto, local)) return false; // o local ganha: vai subir no próximo envio
+        if (local && !naFila && !Regras.vence(remoto, local)) return false;
+        var r = { id: remoto.id, tipo: remoto.tipo, dataHora: remoto.dataHora, dados: remoto.dados, anotadoPor: remoto.anotadoPor,
+          pessoa: remoto.anotadoPor, sobre: remoto.sobre || SOBRE_PADRAO, versao: remoto.versao, modeloVersao: VERSAO_MODELO,
+          criadoEm: remoto.criadoEm, atualizadoEm: remoto.atualizadoEm, apagado: !!remoto.apagado, sincronizado: true };
+        try { validar(r); } catch (e) { return false; }
+        await backend.put('registros', r);
+        if (naFila) await backend.delete('fila', remoto.id);
+        return true;
+      },
+      /* O servidor recusou: sai da fila (não tenta para sempre) e fica marcado até alguém editar. */
+      marcarRejeitado: async function (id, erro) {
+        var r = await backend.get('registros', id);
+        await backend.delete('fila', id);
+        if (!r) return;
+        r.rejeitado = String(erro || 'recusado').slice(0, 120);
+        await backend.put('registros', r);
+      },
+      rejeitados: async function () {
+        var todos = await backend.getAll('registros');
+        return todos.filter(function (r) { return !!r.rejeitado; });
       },
       espacoArquivos: async function () {
         var todos = await backend.getAll('arquivos');

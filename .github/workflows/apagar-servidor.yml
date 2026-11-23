@@ -1,0 +1,27 @@
+# Apaga TODOS os dados da família no servidor (Cloudflare D1). Não mexe nos celulares.
+# Só roda à mão (Actions → Apagar dados do servidor → Run workflow) e com a frase de confirmação exata.
+name: Apagar dados do servidor
+on:
+  workflow_dispatch:
+    inputs:
+      confirmacao:
+        description: 'Digite exatamente: APAGAR TUDO DA FAMILIA'
+        required: true
+permissions:
+  contents: read
+jobs:
+  apagar:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirmacao == 'APAGAR TUDO DA FAMILIA' }}
+    defaults: { run: { working-directory: worker, shell: bash } }
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Apagar tudo do banco da família
+        run: npx --yes wrangler@4.166.0 d1 execute atlas-saude --remote --yes --command "DELETE FROM registros; DELETE FROM historico; DELETE FROM aparelhos; DELETE FROM convites; DELETE FROM tentativas; DELETE FROM reivindicacoes; DELETE FROM familia; DELETE FROM foto; UPDATE contador SET seq = 0;"
+      - run: echo "Todos os dados da família foram apagados do servidor. O responsável entra de novo com o código inicial e convida a família outra vez." >> "$GITHUB_STEP_SUMMARY"

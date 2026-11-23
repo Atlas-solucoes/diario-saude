@@ -7,7 +7,7 @@
   var F = DiarioFamilia;
   var store = DiarioDB.criarStore(DiarioDB.criarIndexedDB('diario-saude'));
   var tela = document.getElementById('tela');
-  var VERSAO_APP = '0.9 (etapa A)';
+  var VERSAO_APP = '1.0 (família conectada)';
   var FOTO_LADO = 256;
   var FOTO_MAX = 40 * 1024;
   var DATA_URL = /^data:(image\/(?:jpeg|png|webp)|application\/pdf);base64,([A-Za-z0-9+\/=]+)$/;
@@ -26,7 +26,30 @@
   }
   function dizer(t) { var s = document.getElementById('status'); if (s) s.textContent = t; }
   function cartao(titulo) { var c = el('section', '', { 'class': 'cartao' }); c.appendChild(el('h3', titulo)); return c; }
-  function salvar(c, msg) { F.salvar(c); atualizarTopo(); dizer(msg || 'Guardado! ⭐'); }
+  function salvar(c, msg) {
+    F.salvar(c); atualizarTopo(); dizer(msg || 'Guardado! ⭐');
+    var m = motor(); if (m && m.conectado() && m.estado().responsavel) m.enviarFamilia().catch(function () {});
+  }
+  /* ---------- Família conectada (etapa C) ---------- */
+  function motor() { return window.DiarioSync && DiarioSync.motor ? DiarioSync.motor() : null; }
+  function somenteLeitura() { var m = motor(); return !!(m && m.conectado() && !m.estado().responsavel); }
+  function horaCurta(iso) { var d = new Date(iso); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+  /* Sincroniza sem atrapalhar: erros ficam no cartão, não em alerta. */
+  function sincronizarQuieto() {
+    var m = motor();
+    if (!m || !m.conectado()) return Promise.resolve();
+    return m.sincronizar().then(function (r) {
+      if (r && r.novos && location.hash.indexOf('#/dia') === 0) window.dispatchEvent(new HashChangeEvent('hashchange'));
+    }).catch(function () {});
+  }
+  var relogio = null;
+  function iniciarSincronizacao() {
+    sincronizarQuieto();
+    if (relogio) return;
+    relogio = setInterval(function () { if (document.visibilityState === 'visible') sincronizarQuieto(); }, 60000);
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') sincronizarQuieto(); });
+    window.addEventListener('online', sincronizarQuieto);
+  }
 
   /* Escolha de emoji por botões grandes. */
   function escolherEmoji(lista, atual, aoEscolher) {
@@ -133,6 +156,7 @@
         var a = await store.salvarArquivo({ tipo: 'foto', mime: 'image/jpeg', conteudo: blob, titulo: 'Foto' });
         n.acompanhada.fotoId = a.id; salvar(n, 'Foto guardada neste celular! ⭐');
         if (velha) await store.apagarArquivo(velha);
+        var mf = motor(); if (mf && mf.conectado() && mf.estado().responsavel) mf.enviarFoto().catch(function () {});
         mostrar();
       } catch (e) { dizer(e.message); }
     });
@@ -141,7 +165,9 @@
     if (c.acompanhada.fotoId) {
       k.appendChild(botao('Tirar a foto', 'secundario', async function () {
         var n = F.atual(); var id = n.acompanhada.fotoId; n.acompanhada.fotoId = null; salvar(n, 'Foto tirada.');
-        await store.apagarArquivo(id); mostrar();
+        await store.apagarArquivo(id);
+        var mf = motor(); if (mf && mf.conectado() && mf.estado().responsavel) mf.enviarFoto().catch(function () {});
+        mostrar();
       }));
     }
     k.appendChild(el('p', 'A foto fica só neste celular. Quando a família estiver conectada, ela vai para os celulares da família (com aviso antes).', { 'class': 'dica' }));
@@ -312,12 +338,12 @@
     var k = cartao('ℹ️ Sobre e aviso');
     k.appendChild(el('p', 'Este app só registra e mostra. A dose de insulina e as decisões sobre o tratamento são do médico. Dúvida? Fale com a equipe de saúde.'));
     k.appendChild(el('p', 'Atlas Saúde · Diário de Saúde · versão ' + VERSAO_APP, { 'class': 'dica' }));
-    k.appendChild(el('p', 'Por enquanto, cada celular guarda o próprio diário. Juntar o diário da família vem na próxima etapa.', { 'class': 'dica' }));
+    k.appendChild(el('p', '"Apagar tudo" apaga só ESTE celular e o desliga da família. O que já subiu continua no servidor da família.', { 'class': 'dica' }));
     var apaga = botao('🗑️ Apagar tudo deste celular', 'secundario perigo', async function () {
       if (apaga.dataset.confirmar !== '1') { apaga.dataset.confirmar = '1'; apaga.textContent = 'Tem certeza? Toque de novo para apagar TUDO'; return; }
       try {
         await store.apagarTudo();
-        try { [F.CHAVE, 'diario-saude-nomes-insulina', 'diario-saude-voz'].forEach(function (c) { localStorage.removeItem(c); }); } catch (e) { /* ignora */ }
+        try { [F.CHAVE, 'diario-saude-nomes-insulina', 'diario-saude-voz', 'diario-saude:conexao'].forEach(function (c) { localStorage.removeItem(c); }); } catch (e) { /* ignora */ }
         atualizarTopo(); dizer('Tudo deste celular foi apagado.'); mostrar();
       } catch (e) { dizer('Erro: ' + e.message); }
     });
@@ -329,12 +355,114 @@
     while (tela.firstChild) tela.removeChild(tela.firstChild);
     var c = F.atual();
     tela.appendChild(el('h2', '⚙️ Ajustes'));
-    tela.appendChild(cartaoCuidado(c));
-    tela.appendChild(cartaoCelular(c));
-    tela.appendChild(cartaoFamilia(c));
+    tela.appendChild(cartaoConectada(c));
+    var trava = somenteLeitura();
+    var cc = cartaoCuidado(c), cf = cartaoFamilia(c);
+    if (trava) [cc, cf].forEach(function (x) {
+      Array.prototype.forEach.call(x.querySelectorAll('button, input'), function (b) { b.disabled = true; });
+      x.appendChild(el('p', '🔒 Quem muda isso é o responsável da família. As mudanças dele chegam aqui sozinhas.', { 'class': 'dica' }));
+    });
+    tela.appendChild(cc);
+    if (!(motor() && motor().conectado())) tela.appendChild(cartaoCelular(c));
+    tela.appendChild(cf);
     tela.appendChild(cartaoCopia());
     tela.appendChild(cartaoSobre());
   }
 
-  window.DiarioAjustesTela = { mostrar: mostrar, atualizarTopo: atualizarTopo, rosto: rosto };
+  function cartaoConectada(c) {
+    var k = cartao('🔗 Família conectada');
+    var m = motor();
+    if (!m || !m.temServidor()) {
+      k.appendChild(el('p', 'Em preparação. Por enquanto, cada celular guarda o próprio diário.', { 'class': 'dica' }));
+      return k;
+    }
+    var e = m.estado();
+    if (!m.conectado()) {
+      if (e.desconectado) k.appendChild(el('p', '⚠️ Este celular foi desconectado da família. Os registros dele continuam aqui.', { 'class': 'alerta' }));
+      k.appendChild(el('p', 'Junta o diário de todos: o que um anota, os outros veem. Funciona sem internet e sobe depois.', { 'class': 'dica' }));
+      k.appendChild(el('p', '⚠️ Ao conectar, os registros, os apelidos e a foto passam a ficar também no servidor da família (Cloudflare), para os celulares da família verem.', { 'class': 'alerta' }));
+      var cod = el('input', '', { type: 'text', autocomplete: 'off', autocapitalize: 'characters', placeholder: 'Código do convite (ex.: ABCD-2345)', 'aria-label': 'Código do convite' });
+      k.appendChild(cod);
+      k.appendChild(botao('📩 Entrar com convite', 'principal', function () {
+        dizer('Entrando…');
+        m.entrar(cod.value, 'Celular de ' + F.textoDe(F.atual().esteCelular || 'mae')).then(function (d) {
+          atualizarTopo(); dizer('Bem-vindo(a) à família conectada! ⭐'); return m.sincronizar();
+        }).then(function () { mostrar(); }).catch(function (x) { dizer(x.message); mostrar(); });
+      }));
+      var det = el('details', '', { 'class': 'detalhes' });
+      det.appendChild(el('summary', 'Sou o responsável (primeira vez)'));
+      det.appendChild(el('p', 'Digite o código inicial que você guardou no GitHub. Ele serve uma vez só.', { 'class': 'dica' }));
+      var ini = el('input', '', { type: 'password', autocomplete: 'off', 'aria-label': 'Código inicial' });
+      det.appendChild(ini);
+      var quem = c.esteCelular || 'pai';
+      det.appendChild(el('p', 'Este celular vai anotar como: ' + F.rotuloDe(quem) + ' (mude em "Este celular é de…").', { 'class': 'dica' }));
+      det.appendChild(botao('Virar o responsável', 'principal', function () {
+        dizer('Conectando…');
+        m.virarResponsavel(ini.value, quem, 'Celular de ' + F.textoDe(quem)).then(function () {
+          ini.value = ''; atualizarTopo(); dizer('Pronto! Você é o responsável da família. ⭐'); return m.sincronizar();
+        }).then(function () { mostrar(); }).catch(function (x) { ini.value = ''; dizer(x.message); });
+      }));
+      k.appendChild(det);
+      return k;
+    }
+    // Conectado
+    var info = el('p', '', { 'class': 'estado-sync' });
+    function pintarEstado() {
+      var s = m.estado();
+      Promise.all([store.pendentes(), store.rejeitados()]).then(function (r) {
+        var partes = [s.ultimo ? '✅ Sincronizado às ' + horaCurta(s.ultimo) : '⏳ Ainda não sincronizou'];
+        if (r[0].length) partes.push('📤 ' + r[0].length + ' esperando internet');
+        if (r[1].length) partes.push('⚠️ ' + r[1].length + ' não subiu (edite para tentar de novo)');
+        if (s.erro) partes.push(s.erro);
+        info.textContent = partes.join(' · ');
+      });
+    }
+    pintarEstado();
+    k.appendChild(el('p', (e.responsavel ? '👑 Responsável da família · ' : '') + '📱 ' + F.textoDe(e.papel), { 'class': 'quem-nome' }));
+    k.appendChild(info);
+    k.appendChild(botao('🔄 Sincronizar agora', 'principal', function () {
+      dizer('Sincronizando…');
+      m.sincronizar().then(function (r) { dizer(r.novos ? r.novos + ' registro(s) novo(s) da família. ⭐' : 'Tudo em dia. ⭐'); pintarEstado(); })
+        .catch(function (x) { dizer(x.message); if (x.desconectado) mostrar(); else pintarEstado(); });
+    }));
+    if (e.responsavel) {
+      k.appendChild(el('h4', 'Convidar alguém da família'));
+      var g = el('div', '', { 'class': 'opcoes' });
+      var saida = el('div', '', { 'class': 'convite' });
+      F.atual().familia.forEach(function (f) {
+        if (f.id === e.papel) return;
+        g.appendChild(botao(f.emoji + ' ' + f.apelido, '', function () {
+          m.convidar(f.id).then(function (cv) {
+            while (saida.firstChild) saida.removeChild(saida.firstChild);
+            saida.appendChild(el('p', 'Código para ' + f.apelido + ' (vale 48 h, uma vez):'));
+            saida.appendChild(el('p', cv.codigo, { 'class': 'destaque' }));
+            saida.appendChild(el('p', 'No celular dela(e): instalar o app → Ajustes → Família conectada → Entrar com convite. Avise que o apelido e a foto vão aparecer lá também.', { 'class': 'dica' }));
+          }).catch(function (x) { dizer(x.message); });
+        }));
+      });
+      k.appendChild(g); k.appendChild(saida);
+      var lista = el('ul', '', { 'class': 'familia' });
+      k.appendChild(botao('📱 Ver celulares conectados', 'secundario', function () {
+        m.aparelhos().then(function (ap) {
+          while (lista.firstChild) lista.removeChild(lista.firstChild);
+          ap.forEach(function (a) {
+            var li = el('li');
+            li.appendChild(el('span', (a.esteCelular ? '⭐ ' : '') + F.rotuloDe(a.papel) + (a.nome ? ' · ' + a.nome : '') + (a.revogado ? ' · desconectado' : ''), { 'class': 'quem-nome' }));
+            if (!a.esteCelular && !a.revogado) {
+              var b = botao('Desconectar', 'secundario perigo', function () {
+                if (b.dataset.confirmar !== '1') { b.dataset.confirmar = '1'; b.textContent = 'Tocar de novo para desconectar'; return; }
+                m.revogar(a.id).then(function () { dizer('Celular desconectado.'); b.remove(); }).catch(function (x) { dizer(x.message); });
+              });
+              li.appendChild(b);
+            }
+            lista.appendChild(li);
+          });
+        }).catch(function (x) { dizer(x.message); });
+      }));
+      k.appendChild(lista);
+    }
+    return k;
+  }
+
+  window.DiarioAjustesTela = { mostrar: mostrar, atualizarTopo: atualizarTopo, rosto: rosto, sincronizarQuieto: sincronizarQuieto, iniciarSincronizacao: iniciarSincronizacao };
 })();

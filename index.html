@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Diário de Saúde</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' https://*.workers.dev; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#2a6f97">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -43,8 +44,11 @@
 </nav>
 
 
+<script src="config.js"></script>
+<script src="regras.js"></script>
 <script src="db.js"></script>
 <script src="familia.js"></script>
+<script src="sync.js"></script>
 <script src="registros.js"></script>
 <script src="estatisticas.js"></script>
 <script src="estatisticas-tela.js"></script>

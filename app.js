@@ -162,6 +162,7 @@
       var agora = new Date().toISOString();
       try {
         await store.adicionar({ tipo: res.tipo, dataHora: agora, pessoa: pessoaSel.value, dados: res.dados });
+        DiarioAjustesTela.sincronizarQuieto();
         dizer('Anotado! Salvo neste celular.');
         falarSeLigado(DiarioVoz.falaAnotado(res.resumo, R.horaLocal(agora)));
         irPara('#/dia/' + DiarioDB.diaLocal(agora));
@@ -371,6 +372,7 @@
       try {
         if (reg) await store.atualizar(reg.id, { dataHora: dataHora, dados: res.dados });
         else await store.adicionar({ tipo: tipo, dataHora: dataHora, pessoa: pessoaSel.value, dados: res.dados });
+        DiarioAjustesTela.sincronizarQuieto();
         dizer('Anotado! Salvo neste celular.');
         falarSeLigado(DiarioVoz.falaAnotado(R.resumo({ tipo: tipo, dados: res.dados }), R.horaLocal(dataHora)));
         irPara('#/dia/' + DiarioDB.diaLocal(dataHora));
@@ -390,7 +392,7 @@
       var sim = el('button', 'Sim, apagar', { type: 'button', 'class': 'perigo' });
       var nao = el('button', 'Não', { type: 'button' });
       sim.addEventListener('click', async function () {
-        try { await store.apagar(r.id); dizer('Registro apagado.'); } catch (e) { dizer('Não apagou: ' + e.message); }
+        try { await store.apagar(r.id); dizer('Registro apagado.'); DiarioAjustesTela.sincronizarQuieto(); } catch (e) { dizer('Não apagou: ' + e.message); }
         rotear();
       });
       nao.addEventListener('click', rotear);
@@ -456,6 +458,7 @@
 
   // Topo com a família deste aparelho (selo "📱 Mãe" ou seletor), depois a migração do banco local; se falhar, o app abre mesmo assim.
   DiarioAjustesTela.atualizarTopo();
+  DiarioAjustesTela.iniciarSincronizacao();
   store.migrar().catch(function () {}).then(rotear);
 
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
