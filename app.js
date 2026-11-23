@@ -177,6 +177,11 @@
 
   function telaInicio() {
     limpar();
+    var cuida = el('a', '', { href: '#/ajustes', 'class': 'cuidando' });
+    cuida.appendChild(DiarioAjustesTela.rosto(52));
+    var fc = DiarioFamilia.atual();
+    cuida.appendChild(el('span', fc.acompanhada.apelido ? 'Cuidando de ' + fc.acompanhada.apelido : 'Toque aqui para pôr o apelido e a foto de quem a gente cuida'));
+    tela.appendChild(cuida);
     tela.appendChild(blocoFalar());
     tela.appendChild(el('h2', 'O que você quer anotar?'));
     var g = el('div', '', { 'class': 'grade' });
@@ -425,7 +430,7 @@
     var ul = el('ul');
     lista.forEach(function (r) {
       var li = el('li', R.resumo(r));
-      li.appendChild(el('small', R.horaLocal(r.dataHora) + ' — ' + r.pessoa));
+      li.appendChild(el('small', R.horaLocal(r.dataHora) + ' — ' + DiarioFamilia.rotuloDe(r.anotadoPor || r.pessoa)));
       li.appendChild(botoesRegistro(r));
       ul.appendChild(li);
     });
@@ -439,15 +444,18 @@
     document.getElementById('nav-dia').className = m ? 'ativo' : '';
     var ne = document.getElementById('nav-estat'); if (ne) ne.className = h === '#/estatisticas' ? 'ativo' : '';
     var nr = document.getElementById('nav-rel'); if (nr) nr.className = h === '#/relatorio' ? 'ativo' : '';
-    if (h === '#/estatisticas' || h === '#/relatorio') document.getElementById('nav-inicio').className = '';
-    if (h === '#/estatisticas') DiarioEstatisticasTela.mostrar();
+    var na = document.getElementById('nav-ajustes'); if (na) na.className = h === '#/ajustes' ? 'ativo' : '';
+    if (h === '#/estatisticas' || h === '#/relatorio' || h === '#/ajustes') document.getElementById('nav-inicio').className = '';
+    if (h === '#/ajustes') DiarioAjustesTela.mostrar();
+    else if (h === '#/estatisticas') DiarioEstatisticasTela.mostrar();
     else if (h === '#/relatorio') DiarioRelatorioTela.mostrar();
     else if (m) telaDia(m[1] || hojeLocal()).catch(function (e) { dizer('Erro: ' + e.message); });
     else telaInicio();
   }
   window.addEventListener('hashchange', rotear);
 
-  // Migração do banco local (modelo 2) antes de mostrar as telas; se falhar, o app abre mesmo assim.
+  // Topo com a família deste aparelho (selo "📱 Mãe" ou seletor), depois a migração do banco local; se falhar, o app abre mesmo assim.
+  DiarioAjustesTela.atualizarTopo();
   store.migrar().catch(function () {}).then(rotear);
 
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist();

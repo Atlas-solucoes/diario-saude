@@ -64,7 +64,7 @@
       barra.appendChild(campoData('De', estado.de, function (v) { estado.de = v; }));
       barra.appendChild(campoData('Até', estado.ate, function (v) { estado.ate = v; }));
     }
-    barra.appendChild(seletor('De quem?', [['', 'Todos'], ['filha', 'Filha'], ['pai', 'Pai'], ['mae', 'Mãe']],
+    barra.appendChild(seletor('De quem?', DiarioFamilia.opcoesFiltro(),
       estado.pessoa, function (v) { estado.pessoa = v; desenhar().catch(erro); }));
     tela.appendChild(barra);
 

@@ -167,7 +167,13 @@
     return saida;
   }
 
-  function quem(r) { return PESSOAS[r.pessoa] || r.pessoa || '-'; }
+  // Etapa A: apelido da família guardado no aparelho (sem emoji: a fonte do PDF não tem). Sem ele, o papel antigo.
+  function nomeDe(id) {
+    var F = !isNode && root.DiarioFamilia;
+    if (F && F.textoDe && id) return F.textoDe(id);
+    return PESSOAS[id] || id || '-';
+  }
+  function quem(r) { return nomeDe(r.anotadoPor || r.pessoa); }
   function plural(n, s, p) { return n + ' ' + (n === 1 ? s : p); }
 
   /* Monta as linhas do relatório: [{t: texto, n: negrito?}] */
@@ -185,7 +191,7 @@
 
     L.push({ t: 'RELATÓRIO DO DIÁRIO DE SAÚDE', n: true });
     par('Período: ' + fmtData(parseDia(opcoes.de)) + ' a ' + fmtData(parseDia(opcoes.ate)) +
-      ' | Registros de: ' + (opcoes.pessoa ? (PESSOAS[opcoes.pessoa] || opcoes.pessoa) : 'todos da família'));
+      ' | Registros de: ' + (opcoes.pessoa ? nomeDe(opcoes.pessoa) : 'todos da família'));
     par('Gerado em: ' + fmtDataHora(opcoes.agora ? new Date(opcoes.agora) : new Date()) + ' (no próprio aparelho)');
     L.push({ t: '' });
     par(AVISO);

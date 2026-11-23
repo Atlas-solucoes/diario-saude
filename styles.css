@@ -4,13 +4,13 @@ body { margin: 0; font-family: system-ui, sans-serif; font-size: 20px; line-heig
 header { padding: 12px 16px 4px; }
 h1 { font-size: 24px; margin: 4px 0; }
 h2 { font-size: 26px; margin: 8px 0; }
-/* Barra de abas fixa embaixo: 4 alvos grandes e separados */
-body > nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+/* Barra de abas fixa embaixo: 5 alvos grandes e separados */
+body > nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;
   padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); background: #fff; border-top: 2px solid #c3d3dd; box-shadow: 0 -4px 12px rgba(0,0,0,.08); }
 nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 60px; padding: 6px 2px;
   border-radius: 12px; color: #1b4965; text-decoration: none; font-size: 14px; font-weight: 600; text-align: center; }
 nav a::before { font-size: 24px; line-height: 1; }
-#nav-inicio::before { content: "🏠"; } #nav-dia::before { content: "📋"; } #nav-estat::before { content: "📊"; } #nav-rel::before { content: "📄"; }
+#nav-inicio::before { content: "🏠"; } #nav-dia::before { content: "📋"; } #nav-estat::before { content: "📊"; } #nav-rel::before { content: "📄"; } #nav-ajustes::before { content: "⚙️"; }
 nav a.ativo { background: #1b4965; color: #fff; }
 .quem { display: block; margin-top: 8px; font-size: 16px; }
 select, input, textarea { font-size: 20px; padding: 10px; width: 100%; margin-top: 4px; border: 2px solid #46606f; border-radius: 10px; background: #fff; color: #12212b; }
@@ -62,3 +62,23 @@ label.chave input { width: 30px; height: 30px; margin: 0; flex: none; }
 .acoes button { width: 100%; margin-top: 0; }
 button.ouvir { margin-bottom: 4px; }
 .destaque.duvida { color: #8c1d18; }
+
+/* Etapa A: Ajustes */
+.selo { display: inline-block; margin: 4px 0; padding: 6px 14px; border-radius: 999px; background: #1b4965; color: #fff; font-size: 16px; font-weight: 700; }
+.cartao { background: #fff; border: 2px solid #c3d3dd; border-radius: 18px; padding: 14px 16px; margin: 0 0 18px; }
+.cartao h3 { margin: 0 0 10px; font-size: 22px; }
+.cartao h4 { margin: 18px 0 6px; font-size: 18px; }
+.emojis { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; }
+button.emoji { min-width: 56px; min-height: 56px; padding: 6px; font-size: 28px; background: #fff; }
+button.emoji.sel { background: #F7A81B; border-color: #0E2C5E; border-width: 3px; }
+.opcoes button.sel { background: #1b4965; color: #fff; }
+.rosto { display: inline-flex; align-items: center; justify-content: center; flex: none; border-radius: 50%; overflow: hidden;
+  background: #fde9b8; border: 3px solid #F7A81B; line-height: 1; }
+.rosto img { width: 100%; height: 100%; object-fit: cover; }
+.cuidado { display: flex; justify-content: center; margin-bottom: 8px; }
+a.cuidando { display: flex; align-items: center; gap: 12px; min-height: 64px; margin: 0 0 12px; padding: 6px 12px; border-radius: 16px;
+  background: #fff; border: 2px solid #F7A81B; color: #0E2C5E; font-weight: 700; font-size: 20px; text-decoration: none; }
+.familia li { display: block; }
+.quem-nome { font-size: 22px; font-weight: 700; }
+.alerta { background: #fff3cd; border: 2px solid #b88700; border-radius: 12px; padding: 10px; color: #3d2f00; font-weight: 600; }
+nav a { font-size: 13px; }

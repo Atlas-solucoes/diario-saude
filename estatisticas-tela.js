@@ -36,7 +36,7 @@
     var p = function (n) { return (n < 10 ? '0' : '') + n; };
     return p(d.getDate()) + '/' + p(d.getMonth() + 1) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
   }
-  function nomePessoa(p) { return p === 'filha' ? 'Filha' : p === 'pai' ? 'Pai' : p === 'mae' ? 'Mãe' : String(p); }
+  function nomePessoa(p) { return window.DiarioFamilia ? DiarioFamilia.rotuloDe(p) : String(p); }
 
   function listaAnotada(itens, formatar) {
     var ul = el('ul', '', { 'class': 'anotados' });
@@ -94,7 +94,7 @@
       [[60, '1 hora'], [120, '2 horas'], [180, '3 horas'], [240, '4 horas'], [360, '6 horas'], [720, '12 horas']],
       estado.janela, function (v) { estado.janela = Number(v); desenhar(); }));
     barra.appendChild(seletor('De quem?',
-      [['', 'Todos'], ['filha', 'Filha'], ['pai', 'Pai'], ['mae', 'Mãe']],
+      DiarioFamilia.opcoesFiltro(),
       estado.pessoa, function (v) { estado.pessoa = v; desenhar(); }));
     tela.appendChild(barra);
 
