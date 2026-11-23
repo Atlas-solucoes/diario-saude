@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diário de Saúde</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2a6f97">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Diário">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<!-- Aviso fixo (texto da T-0031-1): fica FORA da área de telas, por isso aparece em todas -->
+<aside id="aviso" role="note">
+  <strong>Aviso:</strong>
+  este aplicativo só registra e mostra informações. A dose de insulina e as decisões sobre tratamento são definidas com o médico.
+</aside>
+
+<header>
+  <h1>Diário de Saúde</h1>
+  <label class="quem">Quem está usando?
+    <select id="pessoa">
+      <option value="filha">Filha</option>
+      <option value="pai">Pai</option>
+      <option value="mae">Mãe</option>
+    </select>
+  </label>
+</header>
+
+<main id="tela" tabindex="-1"></main>
+<p id="status" role="status"></p>
+<nav>
+  <a href="#/inicio" id="nav-inicio">Início</a>
+  <a href="#/dia" id="nav-dia">Hoje</a>
+  <a href="#/estatisticas" id="nav-estat">Estatísticas</a>
+  <a href="#/relatorio" id="nav-rel">Relatório</a>
+</nav>
+
+
+<script src="db.js"></script>
+<script src="registros.js"></script>
+<script src="estatisticas.js"></script>
+<script src="estatisticas-tela.js"></script>
+<script src="relatorio.js"></script>
+<script src="relatorio-tela.js"></script>
+<script src="voz.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

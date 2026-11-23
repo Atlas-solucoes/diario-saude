@@ -1,0 +1,64 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; font-size: 20px; line-height: 1.35; background: #f4f8fb; color: #12212b; padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+#aviso { background: #fff3cd; color: #3d2f00; border-bottom: 3px solid #b88700; padding: 8px 16px; font-size: 15px; }
+header { padding: 12px 16px 4px; }
+h1 { font-size: 24px; margin: 4px 0; }
+h2 { font-size: 26px; margin: 8px 0; }
+/* Barra de abas fixa embaixo: 4 alvos grandes e separados */
+body > nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); background: #fff; border-top: 2px solid #c3d3dd; box-shadow: 0 -4px 12px rgba(0,0,0,.08); }
+nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 60px; padding: 6px 2px;
+  border-radius: 12px; color: #1b4965; text-decoration: none; font-size: 14px; font-weight: 600; text-align: center; }
+nav a::before { font-size: 24px; line-height: 1; }
+#nav-inicio::before { content: "🏠"; } #nav-dia::before { content: "📋"; } #nav-estat::before { content: "📊"; } #nav-rel::before { content: "📄"; }
+nav a.ativo { background: #1b4965; color: #fff; }
+.quem { display: block; margin-top: 8px; font-size: 16px; }
+select, input, textarea { font-size: 20px; padding: 10px; width: 100%; margin-top: 4px; border: 2px solid #46606f; border-radius: 10px; background: #fff; color: #12212b; }
+main { padding: 12px 16px; }
+.grade { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+button { font-family: inherit; font-size: 20px; padding: 14px 10px; border: 2px solid #1b4965; border-radius: 14px; background: #d6eaf5; color: #08202e; min-height: 64px; }
+button:focus-visible, a:focus-visible, input:focus-visible { outline: 4px solid #e07b00; outline-offset: 2px; }
+button.tipo { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 96px; font-weight: 600; }
+.icone { font-size: 34px; }
+button.principal { background: #1b4965; color: #fff; width: 100%; margin-top: 18px; font-weight: 700; }
+button.secundario { width: 100%; margin-top: 12px; background: #fff; }
+button.perigo { background: #fde2e1; border-color: #8c1d18; color: #5c0f0b; }
+button:disabled { opacity: .6; }
+.pergunta { font-size: 22px; font-weight: 600; margin: 0 0 8px; }
+.campo { margin: 20px 0; }
+.rotulo { display: block; font-weight: 600; margin: 0 0 6px; }
+.opcoes { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.opcoes button.sel { background: #1b4965; color: #fff; border-color: #0b2a3d; font-weight: 700; }
+.chips { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+button.chip { min-height: 48px; padding: 8px 14px; background: #fff; }
+.detalhes { margin-top: 14px; border: 2px dashed #46606f; border-radius: 12px; padding: 8px 10px; }
+.detalhes summary { font-weight: 600; min-height: 48px; display: flex; align-items: center; cursor: pointer; }
+.erro { color: #8c1d18; font-weight: 600; min-height: 1.2em; }
+.ultimo { background: #fff; border: 2px solid #1b4965; border-radius: 12px; padding: 10px; margin-bottom: 12px; }
+.ultimo h3 { margin: 0 0 4px; font-size: 20px; }
+.linha { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 12px 0; }
+.linha button.secundario { margin-top: 0; }
+label.rotulo input { margin-top: 6px; }
+.linha p { grid-column: 1 / -1; margin: 0; font-weight: 600; }
+ul { list-style: none; padding: 0; }
+li { background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 14px; border: 1px solid #c3d3dd; }
+li .linha { margin: 12px 0 0; }
+li small { color: #3a4b57; display: block; font-size: 16px; }
+#status { margin: 0 16px; font-size: 16px; color: #2d3f4b; min-height: 1.3em; }
+[hidden] { display: none !important; }
+
+/* Voz */
+.voz { margin: 4px 0 18px; }
+button.falar { width: 100%; min-height: 76px; font-size: 24px; font-weight: 700; background: #F7A81B; border-color: #0E2C5E; color: #0E2C5E; }
+.dica { font-size: 16px; color: #3a4b57; margin: 8px 0; }
+.ajustes { margin-top: 24px; }
+label.chave { display: flex; align-items: center; gap: 14px; min-height: 56px; font-weight: 600; }
+label.chave input { width: 30px; height: 30px; margin: 0; flex: none; }
+.entendi { background: #fff; border: 3px solid #1b4965; border-radius: 14px; padding: 14px 16px; margin: 8px 0 12px; }
+.entendi p { margin: 6px 0; }
+.tipo-entendi { font-weight: 700; font-size: 22px; }
+.destaque { font-size: 44px; font-weight: 800; color: #0E2C5E; letter-spacing: .5px; }
+.acoes { display: grid; gap: 12px; }
+.acoes button { width: 100%; margin-top: 0; }
+button.ouvir { margin-bottom: 4px; }
+.destaque.duvida { color: #8c1d18; }
