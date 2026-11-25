@@ -8,7 +8,7 @@
    Regra de ouro: o servidor só guarda e devolve. Não calcula, não classifica, não sugere. */
 import regras from './regras.cjs';
 
-const TIPOS = ['alimentacao', 'exercicio', 'emocao', 'sono', 'diferente', 'nausea', 'tontura', 'pressao', 'insulina', 'glicose'];
+const TIPOS = ['alimentacao', 'exercicio', 'emocao', 'sono', 'diferente', 'nausea', 'tontura', 'pressao', 'insulina', 'glicose', 'personalizado'];
 const ID_RE = /^[A-Za-z0-9-]{8,80}$/;
 const ID_PESSOA = /^[a-z0-9_-]{1,40}$/;
 const LOTE_MAX = 200;
@@ -20,7 +20,7 @@ const MAX_ERROS_INICIAL_DIA = 30;
 const CORPO_MAX = 1100 * 1024;
 const DADOS_MAX = 5000;
 const FOTO_MAX = 60 * 1024;
-const FAMILIA_MAX = 20000;
+const FAMILIA_MAX = 64 * 1024;
 const CODIGO_MIN = 24;
 const ALFABETO = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -71,6 +71,16 @@ export function validarDados(tipo, d) {
     if (!inteiro(d.valor, 20, 600)) return 'glicose: use um número inteiro de 20 a 600';
     if (d.momento !== undefined && !emLista(d.momento, ['antes', 'depois'])) return 'glicose: momento inválido';
     if (d.origem !== undefined && !emLista(d.origem, ['sensor', 'dedo', 'nao_sei'])) return 'glicose: origem inválida';
+  } else if (tipo === 'personalizado') {
+    // Botão criado pela família: o esquema está no documento da família; aqui só a forma segura dos dados.
+    if (typeof d.botao !== 'string' || !/^b-[a-z0-9]{6}$/.test(d.botao)) return 'botão inválido';
+    const chaves = Object.keys(d).filter((k) => k !== 'botao');
+    if (chaves.length > 8) return 'respostas demais';
+    for (const k of chaves) {
+      if (!/^q-[a-z0-9]{4,8}$/.test(k)) return 'pergunta inválida';
+      const v = d[k];
+      if (!((typeof v === 'string' && v.length <= 300) || (typeof v === 'number' && isFinite(v)))) return 'resposta inválida';
+    }
   }
   return null;
 }
