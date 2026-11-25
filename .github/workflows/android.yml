@@ -1,0 +1,93 @@
+# App Android "Atlas Saúde Sentinela". Fonte: Atlas-solucoes/atlas-star, projetos/diario-saude/android (esta é uma cópia).
+# Repo PÚBLICO: só push na main ou disparo manual (nunca pull_request). Só o job "publicar" recebe segredo e escrita.
+name: App Android (Sentinela)
+on:
+  push:
+    branches: [main]
+    paths: ['android/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+    inputs:
+      criar_chave:
+        description: 'Só na PRIMEIRA vez: digite CRIAR CHAVE para criar a chave de assinatura'
+        required: false
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: android-sentinela
+  cancel-in-progress: false
+jobs:
+  testar:
+    name: Testar e montar (sem segredo)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults: { run: { working-directory: android, shell: bash } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.11.1' }
+      - name: Testes da lógica (JUnit) e APK de teste
+        run: gradle --no-daemon --stacktrace :app:testDebugUnitTest :app:assembleDebug
+      - name: Relatório dos testes (se falhar)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with: { name: relatorio-testes, path: android/app/build/reports/tests, if-no-files-found: ignore }
+
+  publicar:
+    name: Assinar e publicar no Release
+    needs: testar
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    defaults: { run: { working-directory: android, shell: bash } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.11.1' }
+      - name: Chave de assinatura (cifrada no repo; criada só com CRIAR CHAVE)
+        env:
+          SENHA: ${{ secrets.ANDROID_SENHA }}
+          CRIAR: ${{ github.event.inputs.criar_chave }}
+        run: |
+          [ ${#SENHA} -ge 20 ] || { echo "Falta o segredo ANDROID_SENHA (frase com 20 ou mais caracteres)"; exit 1; }
+          if [ ! -f assinatura.enc ]; then
+            [ "$CRIAR" = "CRIAR CHAVE" ] || { echo "Ainda não existe chave de assinatura. Rode este workflow à mão (Run workflow) digitando CRIAR CHAVE."; exit 1; }
+            keytool -genkeypair -keystore /tmp/sentinela.jks -storetype PKCS12 -alias sentinela -keyalg RSA -keysize 4096 -validity 36500 \
+              -storepass:env SENHA -keypass:env SENHA -dname "CN=Atlas Saude Sentinela, O=Atlas Solucoes, C=BR"
+            openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -in /tmp/sentinela.jks -out assinatura.enc -pass env:SENHA
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add assinatura.enc
+            git commit -m "Sentinela: chave de assinatura cifrada (criada no GitHub Actions com CRIAR CHAVE)"
+            git push
+          else
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in assinatura.enc -out /tmp/sentinela.jks -pass env:SENHA
+          fi
+          echo "SENTINELA_KEYSTORE=/tmp/sentinela.jks" >> "$GITHUB_ENV"
+      - name: Montar APK assinado
+        env:
+          SENTINELA_SENHA: ${{ secrets.ANDROID_SENHA }}
+          VERSAO_CODIGO: ${{ github.run_number }}
+        run: |
+          trap 'rm -f /tmp/sentinela.jks' EXIT
+          gradle --no-daemon :app:assembleRelease
+      - name: Publicar no Release (com a impressão da assinatura)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          N: ${{ github.run_number }}
+        run: |
+          APK=app/build/outputs/apk/release/app-release.apk
+          AS=$(ls "$ANDROID_HOME"/build-tools | sort -V | tail -1)
+          D=$("$ANDROID_HOME/build-tools/$AS/apksigner" verify --print-certs "$APK" | grep -m1 'SHA-256 digest' | sed 's/.*: //')
+          IMP=$(echo "$D" | tr 'a-f' 'A-F' | sed 's/../&:/g; s/:$//')
+          test -n "$IMP" || { echo "Não consegui ler a assinatura do APK"; exit 1; }
+          cp "$APK" /tmp/atlas-saude-sentinela.apk
+          printf 'App Android Atlas Saúde Sentinela, versão 0.1.%s.\n\nImpressão SHA-256 da assinatura (deve ser igual à mostrada no fim da tela do app):\n\n%s\n\nInstalar só pelo link do Release mais recente deste repositório.\n' "$N" "$IMP" > /tmp/notas.md
+          gh release create "sentinela-v$N" /tmp/atlas-saude-sentinela.apk --title "Sentinela 0.1.$N" --notes-file /tmp/notas.md --latest
+          echo "Impressão: $IMP" >> "$GITHUB_STEP_SUMMARY"

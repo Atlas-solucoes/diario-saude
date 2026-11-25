@@ -287,6 +287,11 @@ async function tratar(req, env) {
   if (!ap) return [401, { erro: 'este celular foi desconectado', desconectado: true }];
 
   if (caminho === '/api/eu') return [200, { aparelhoId: ap.id, papel: ap.papel, responsavel: !!ap.responsavel }];
+  // Sentinela (app Android): só a configuração da família (Ajustes → Família e Mensagens), para guardar e usar sem internet.
+  if (caminho === '/api/config') {
+    const fam = await db.prepare('SELECT doc, versao FROM familia WHERE id = 1').first();
+    return [200, { familia: fam ? { versao: fam.versao, doc: JSON.parse(fam.doc) } : null }];
+  }
   if (caminho === '/api/sync') return sincronizar(db, corpo, ap, agoraIso);
 
   // Só o responsável (S3).
