@@ -66,16 +66,19 @@ class Armazem(ctx: Context) {
         return Leitura(p.getInt("leituraValor", 0), p.getString("leituraSeta", null)) to ms
     }
 
-    /** Fila de SMS que não saíram (sem sinal): reenviados pelo Verificador. */
-    fun fila(): MutableList<Pair<String, String>> {
+    /** Fila de SMS que não saíram (sem sinal): reenviados pelo Verificador. Vencem em 2 h (aviso velho não serve mais). */
+    data class NaFila(val tel: String, val msg: String, val ms: Long)
+    fun fila(): MutableList<NaFila> {
         val a = try { JSONArray(p.getString("fila", "[]")) } catch (e: Exception) { JSONArray() }
-        return (0 until a.length()).map { a.getJSONObject(it).let { o -> o.getString("tel") to o.getString("msg") } }.toMutableList()
+        val limite = System.currentTimeMillis() - 2 * 3600_000L
+        return (0 until a.length()).map { a.getJSONObject(it).let { o -> NaFila(o.getString("tel"), o.getString("msg"), o.optLong("ms", 0L)) } }
+            .filter { it.ms > limite }.toMutableList()
     }
-    fun guardarFila(l: List<Pair<String, String>>) {
-        val a = JSONArray(); l.takeLast(50).forEach { a.put(JSONObject().put("tel", it.first).put("msg", it.second)) }
+    fun guardarFila(l: List<NaFila>) {
+        val a = JSONArray(); l.takeLast(50).forEach { a.put(JSONObject().put("tel", it.tel).put("msg", it.msg).put("ms", it.ms)) }
         p.edit().putString("fila", a.toString()).apply()
     }
-    @Synchronized fun naFila(tel: String, msg: String) { val f = fila(); f.add(tel to msg); guardarFila(f) }
+    @Synchronized fun naFila(tel: String, msg: String, ms: Long = System.currentTimeMillis()) { val f = fila(); f.add(NaFila(tel, msg, ms)); guardarFila(f) }
 
     /** Diagnóstico: as últimas 20 notificações da Abbott vistas, só neste aparelho, apagadas depois de 24 h. */
     fun diagnostico(): List<String> {
@@ -147,7 +150,7 @@ object Servidor {
 
 object Sms {
     /** Envia 1 SMS pelo chip padrão. Se não sair (sem sinal), vai para a fila. */
-    fun enviar(ctx: Context, tel: String, msg: String, contarNoTeto: Boolean) {
+    fun enviar(ctx: Context, tel: String, msg: String, contarNoTeto: Boolean, desdeMs: Long = System.currentTimeMillis()) {
         val a = Armazem(ctx)
         if (contarNoTeto) {
             val (pode, e) = Freios.contar(a.freios, dia(System.currentTimeMillis()), 1)
@@ -156,11 +159,11 @@ object Sms {
         }
         try {
             val sm: SmsManager = if (Build.VERSION.SDK_INT >= 31) ctx.getSystemService(SmsManager::class.java) else @Suppress("DEPRECATION") SmsManager.getDefault()
-            val i = Intent(ctx, ResultadoSms::class.java).putExtra("tel", tel).putExtra("msg", msg)
+            val i = Intent(ctx, ResultadoSms::class.java).putExtra("tel", tel).putExtra("msg", msg).putExtra("ms", desdeMs)
             val pi = PendingIntent.getBroadcast(ctx, (tel + msg + System.nanoTime()).hashCode(), i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             sm.sendTextMessage(tel, null, msg, pi, null)
         } catch (e: Exception) {
-            a.naFila(tel, msg)
+            a.naFila(tel, msg, desdeMs)
             a.aviso = "SMS não saiu agora (" + (e.message ?: "erro") + "). Vai tentar de novo."
         }
     }
@@ -172,7 +175,7 @@ class ResultadoSms : BroadcastReceiver() {
         if (resultCode != android.app.Activity.RESULT_OK) {
             val tel = intent.getStringExtra("tel") ?: return
             val msg = intent.getStringExtra("msg") ?: return
-            Armazem(ctx).naFila(tel, msg)
+            Armazem(ctx).naFila(tel, msg, intent.getLongExtra("ms", System.currentTimeMillis()))
         }
     }
 }
@@ -211,7 +214,7 @@ class Verificador(ctx: Context, params: WorkerParameters) : Worker(ctx, params) 
         if (a.token != null) Servidor.atualizarConfig(ctx)
         // reenvia a fila (o que não saiu por falta de sinal)
         val fila = a.fila(); a.guardarFila(emptyList())
-        fila.forEach { Sms.enviar(ctx, it.first, it.second, contarNoTeto = false) }
+        fila.forEach { Sms.enviar(ctx, it.tel, it.msg, contarNoTeto = false, desdeMs = it.ms) }
         val cfg = a.config() ?: return Result.success()
         if (Vida.estaNaHora(cfg.vidaHoras, a.ultimaVidaMs, agora)) {
             val ult = a.ultimaLeitura()

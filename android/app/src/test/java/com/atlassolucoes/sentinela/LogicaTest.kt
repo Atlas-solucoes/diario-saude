@@ -74,15 +74,29 @@ class LogicaTest {
         val dia = "2026-11-25"; var e = EstadoFreios(); val t0 = 1_000_000_000L
         var r = Freios.alarme(e, TipoAviso.ALARME_ALTA, t0, dia, 3); assertEquals(Decisao.ENVIAR, r.first); e = r.second
         r = Freios.alarme(e, TipoAviso.ALARME_ALTA, t0 + 5 * 60_000, dia, 3); assertEquals("mesmo tipo em 10 min", Decisao.REPETIDO, r.first)
-        r = Freios.alarme(e, TipoAviso.ALARME_BAIXA, t0 + 5 * 60_000, dia, 3); assertEquals("outro tipo passa", Decisao.ENVIAR, r.first); e = r.second
-        val tipos = listOf(TipoAviso.PERDA_SINAL, TipoAviso.ALARME, TipoAviso.AVISO_ABBOTT, TipoAviso.ALARME_ALTA)
-        tipos.forEachIndexed { i, t -> r = Freios.alarme(e, t, t0 + (11 + i) * 60_000L, dia, 3); e = r.second }
-        r = Freios.alarme(e, TipoAviso.ALARME_BAIXA, t0 + 20 * 60_000, dia, 3); assertEquals("7º evento na hora", Decisao.LIMITE_HORA, r.first)
+        r = Freios.alarme(e, TipoAviso.AVISO_ABBOTT, t0 + 5 * 60_000, dia, 3); assertEquals("outro tipo passa", Decisao.ENVIAR, r.first); e = r.second
+        // enche a hora com eventos não críticos (alta e aviso), alternando para não cair no "repetido"
+        listOf(11, 16, 22, 27).forEachIndexed { i, m -> r = Freios.alarme(e, if (i % 2 == 0) TipoAviso.ALARME_ALTA else TipoAviso.AVISO_ABBOTT, t0 + m * 60_000L, dia, 3); e = r.second }
+        r = Freios.alarme(e, TipoAviso.ALARME_ALTA, t0 + 40 * 60_000, dia, 3); assertEquals("7º evento não crítico na hora", Decisao.LIMITE_HORA, r.first)
+        assertEquals("baixa nunca é barrada", Decisao.ENVIAR, Freios.alarme(e, TipoAviso.ALARME_BAIXA, t0 + 40 * 60_000, dia, 3).first)
         var cheio = EstadoFreios(dia = dia, smsHoje = Freios.SMS_POR_DIA - 1)
         r = Freios.alarme(cheio, TipoAviso.ALARME_ALTA, t0, dia, 3); assertEquals(Decisao.AVISAR_TETO, r.first); cheio = r.second
         r = Freios.alarme(cheio, TipoAviso.ALARME_ALTA, t0 + 3 * 60 * 60_000L, dia, 3); assertEquals(Decisao.LIMITE_DIA, r.first)
         r = Freios.alarme(cheio, TipoAviso.ALARME_ALTA, t0 + 3 * 60 * 60_000L, "2026-11-26", 3); assertEquals("dia novo zera o teto", Decisao.ENVIAR, r.first)
         assertEquals(e, Freios.deJson(Freios.paraJson(e)))
+    }
+
+    @Test fun altaProlongadaNuncaCalaBaixaNemPerdaDeSinal() {
+        val dia = "2026-11-25"; var e = EstadoFreios(); val t0 = 2_000_000_000L
+        // alta repetida a cada 11 min por 10 h: esgota o limite por hora e o teto do dia
+        var t = t0
+        repeat(60) { e = Freios.alarme(e, TipoAviso.ALARME_ALTA, t, dia, 4).second; t += 11 * 60_000L }
+        assertNotEquals(Decisao.ENVIAR, Freios.alarme(e, TipoAviso.ALARME_ALTA, t, dia, 4).first)
+        assertEquals("baixa passa", Decisao.ENVIAR, Freios.alarme(e, TipoAviso.ALARME_BAIXA, t, dia, 4).first)
+        assertEquals("perda de sinal passa", Decisao.ENVIAR, Freios.alarme(e, TipoAviso.PERDA_SINAL, t, dia, 4).first)
+        assertEquals("alarme genérico passa", Decisao.ENVIAR, Freios.alarme(e, TipoAviso.ALARME, t, dia, 4).first)
+        val depois = Freios.alarme(e, TipoAviso.ALARME_BAIXA, t, dia, 4).second
+        assertEquals("baixa ainda não repete em 10 min", Decisao.REPETIDO, Freios.alarme(depois, TipoAviso.ALARME_BAIXA, t + 60_000, dia, 4).first)
     }
 
     @Test fun listaDeQuemRecebeMudou() {

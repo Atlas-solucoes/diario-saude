@@ -164,7 +164,9 @@ object Mensagens {
     fun teste(): String = "Atlas Saude: teste do Sentinela. Se voce recebeu, esta tudo certo."
 }
 
-/** Freios contra SMS demais: mesmo tipo não repete em 10 min; até 6 eventos de alarme por hora; teto de SMS por dia. */
+/** Freios contra SMS demais: mesmo tipo não repete em 10 min; até 6 eventos de alarme por hora; teto de SMS por dia.
+ *  SEGURANÇA (parecer do Engenheiro): glicose BAIXA, PERDA DE SINAL e alarme genérico (pode ser baixa) NUNCA são barrados
+ *  pelo limite por hora nem pelo teto do dia — só não se repetem em 10 min. Uma alta prolongada não pode calar uma baixa. */
 data class EstadoFreios(val eventos: List<Long> = emptyList(), val ultimoPorTipo: Map<String, Long> = emptyMap(),
                         val dia: String = "", val smsHoje: Int = 0, val tetoAvisado: Boolean = false)
 
@@ -175,6 +177,7 @@ object Freios {
     const val HORA_MS = 60 * 60 * 1000L
     const val EVENTOS_POR_HORA = 6
     const val SMS_POR_DIA = 120
+    val CRITICOS = setOf(TipoAviso.ALARME_BAIXA, TipoAviso.PERDA_SINAL, TipoAviso.ALARME)
 
     /** Decide um evento de alarme que mandaria `nSms` mensagens. Devolve a decisão e o estado novo. */
     fun alarme(e0: EstadoFreios, tipo: TipoAviso, agora: Long, dia: String, nSms: Int): Pair<Decisao, EstadoFreios> {
@@ -182,6 +185,9 @@ object Freios {
         val ult = e.ultimoPorTipo[tipo.name]
         if (ult != null && agora - ult < REPETE_MS) return Decisao.REPETIDO to e
         val recentes = e.eventos.filter { agora - it < HORA_MS }
+        if (tipo in CRITICOS) {
+            return Decisao.ENVIAR to e.copy(eventos = recentes, ultimoPorTipo = e.ultimoPorTipo + (tipo.name to agora), smsHoje = e.smsHoje + nSms)
+        }
         if (recentes.size >= EVENTOS_POR_HORA) return Decisao.LIMITE_HORA to e.copy(eventos = recentes)
         if (e.smsHoje + nSms > SMS_POR_DIA) {
             return if (!e.tetoAvisado) Decisao.AVISAR_TETO to e.copy(eventos = recentes, tetoAvisado = true)
