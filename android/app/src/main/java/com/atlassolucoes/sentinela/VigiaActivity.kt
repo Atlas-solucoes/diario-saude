@@ -150,18 +150,21 @@ class VigiaActivity : Activity() {
         else caixa.addView(link("Apareceu \"Acesso negado\"?") { a.negadoSms = true; desenhar() }, lp(6))
     }
 
-    /** Cartão "o Android travou": leva direto à página do app e mostra onde tocar. */
+    /** Cartão "o Android travou". Pesquisa (25/11): a opção só aparece DEPOIS do bloqueio e com o app FECHADO. */
     private fun destravar(incluiSms: Boolean) {
         val c = cartao(Cores.AMBAR_CLARO, Cores.DOURADO)
         c.addView(texto("🔓 O Android travou? É normal na 1ª vez.", 19f, Cores.AMBAR, negrito = true), lp(baixo = 6))
         c.addView(texto("Ele protege contra golpes. Destrave uma vez só:", 16f, Cores.TEXTO), lp(baixo = 6))
-        c.addView(item("1", "Toque em \"Abrir a página do app\" aqui embaixo."))
-        c.addView(item("2", "Lá em cima, à direita, toque nos três pontinhos ⋮"))
+        c.addView(item("1", "Toque em \"Tentar de novo\" acima. No aviso \"Acesso negado ao app\", toque em Fechar."))
+        c.addView(item("2", "Feche o Atlas Saúde: deslize de baixo para cima e segure (ou toque em |||) e arraste o Atlas Saúde para cima."))
+        c.addView(item("3", "Na tela inicial, segure o dedo no ícone do Atlas Saúde → ⓘ Informações do app."))
+        c.addView(item("4", "Lá em cima, à direita, toque nos três pontinhos ⋮"))
         c.addView(desenhoTresPontos(), lp(6, 6))
-        c.addView(item("3", "Toque em \"Permitir configurações restritas\" e confirme com seu PIN ou digital."))
-        if (incluiSms) c.addView(item("4", "Ainda nessa página: Permissões → SMS → Permitir."))
-        c.addView(item(if (incluiSms) "5" else "4", "Volte aqui (botão voltar ◁) e toque em \"Tentar de novo\"."))
-        c.addView(botao("Abrir a página do app") { abrirPaginaDoApp() }, lp(12))
+        c.addView(item("5", "Toque em \"Permitir configurações restritas\" e confirme com seu PIN ou digital."))
+        c.addView(item("6", "Não apareceu ⋮? Na mesma página toque em \"Forçar parada\", volte e entre de novo pelo ícone."))
+        if (incluiSms) c.addView(item("7", "Depois, ainda nessa página: Permissões → SMS → Permitir."))
+        c.addView(item(if (incluiSms) "8" else "7", "Abra o Atlas Saúde de novo → Ajustes → Vigia."))
+        c.addView(link("Abrir a página do app (se o ⋮ não aparecer, use o caminho pelo ícone com o app fechado)") { abrirPaginaDoApp() }, lp(8))
         caixa.addView(c, lp(12))
     }
 
