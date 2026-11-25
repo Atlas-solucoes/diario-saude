@@ -368,11 +368,17 @@
   function cartaoMensagens(c) {
     var k = cartao('📩 Mensagens para a família');
     var quem = F.textoDe(c.esteCelular) || F.nomeAcompanhada(c);
-    k.appendChild(el('p', 'ℹ️ Nada é enviado ainda. As mensagens começam quando o app Android estiver instalado no celular de ' + F.nomeAcompanhada(c) + '.', { 'class': 'alerta' }));
+    var vg = window.AtlasNativo ? estadoVigia() : null;
+    k.appendChild(el('p', vg && vg.ativo
+      ? (vg.pronto ? '✅ O vigia deste celular manda estas mensagens.' : '⚠️ Vigia deste celular: ' + (vg.falta || 'falta configurar') + ' (Ajustes → 🛡️ Vigia).')
+      : 'ℹ️ Quem manda os SMS é o app Android Atlas Saúde no celular de ' + F.nomeAcompanhada(c) + ', com o 🛡️ Vigia ligado. Depois de mudar aqui, toque lá em Vigia → "buscar de novo".', { 'class': 'alerta' }));
     var m = JSON.parse(JSON.stringify(c.mensagens));
     var comTel = c.familia.filter(function (f) { return !!f.telefone; });
     k.appendChild(el('h4', 'Quem recebe'));
-    if (!comTel.length) k.appendChild(el('p', 'Ninguém tem telefone ainda. Ponha o celular das pessoas em Ajustes → Família.', { 'class': 'dica' }));
+    if (!comTel.length) {
+      k.appendChild(el('p', 'Ninguém tem telefone ainda. Ponha o celular das pessoas em Família (botão Editar em cada pessoa).', { 'class': 'dica' }));
+      k.appendChild(botao('👨‍👩‍👧 Pôr os telefones', 'principal', function () { location.hash = '#/ajustes/familia'; }));
+    }
     var custo = el('p', '', { 'class': 'alerta' });
     var previa = el('p', '', { 'class': 'destaque previa' });
     function atualizar() {
@@ -572,7 +578,11 @@
   window.addEventListener('atlasnativo', function () { if (location.hash === '#/ajustes' || location.hash === '#/ajustes/') mostrar(''); });
   function travar(k) {
     Array.prototype.forEach.call(k.querySelectorAll('button, input'), function (b) { b.disabled = true; });
-    k.appendChild(el('p', '🔒 Quem muda isso é o responsável da família. As mudanças dele chegam aqui sozinhas.', { 'class': 'dica' }));
+    // aviso EM CIMA (logo depois do título), senão parece que "nada acontece" ao tocar
+    var aviso = el('p', '🔒 Só o celular do responsável muda isto. As mudanças dele chegam aqui sozinhas.', { 'class': 'alerta' });
+    var titulo = k.querySelector('h3');
+    if (titulo && titulo.nextSibling) k.insertBefore(aviso, titulo.nextSibling); else k.insertBefore(aviso, k.firstChild);
+    k.classList.add('travado');
     return k;
   }
   function mostrar(parte) {

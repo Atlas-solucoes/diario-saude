@@ -24,6 +24,7 @@ button.principal { background: #1b4965; color: #fff; width: 100%; margin-top: 18
 button.secundario { width: 100%; margin-top: 12px; background: #fff; }
 button.perigo { background: #fde2e1; border-color: #8c1d18; color: #5c0f0b; }
 button:disabled { opacity: .6; }
+.travado button:disabled, .travado input:disabled { opacity: .35; filter: grayscale(1); }
 .pergunta { font-size: 22px; font-weight: 600; margin: 0 0 8px; }
 .campo { margin: 20px 0; }
 .rotulo { display: block; font-weight: 600; margin: 0 0 6px; }
