@@ -31,7 +31,9 @@
   function ehPoucos(n, minimoN) { return n <= minimoN; }
 
   function rotuloEscolha(tipo, campoId, valor) {
-    var campos = R.ESQUEMAS[tipo].campos;
+    var esq = R.ESQUEMAS[tipo];
+    if (!esq) return String(valor); // tipo desconhecido ou botão criado: mostra o valor como está
+    var campos = esq.campos;
     for (var i = 0; i < campos.length; i++) {
       if (campos[i].id !== campoId) continue;
       for (var j = 0; j < campos[i].opcoes.length; j++) if (campos[i].opcoes[j][0] === valor) return campos[i].opcoes[j][1];

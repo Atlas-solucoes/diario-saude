@@ -83,6 +83,23 @@
     ] }
   };
   var TIPOS = ['alimentacao', 'exercicio', 'emocao', 'sono', 'diferente', 'nausea', 'tontura', 'pressao', 'insulina', 'glicose'];
+  // Tipos que podem ser GRAVADOS (igual a db.js, worker e nucleo.js; um teste confere): os de cima + os botões criados.
+  var TIPOS_GRAVADOS = TIPOS.concat(['personalizado']);
+
+  /* Botões criados pela família (tipo 'personalizado'): o esquema vem do documento da família (familia.js).
+     No navegador, lê do aparelho; em teste, usarFonteBotoes(fn) troca a fonte. */
+  var Fam = (typeof module !== 'undefined' && module.exports) ? require('./familia.js') : root.DiarioFamilia;
+  var fonteBotao = function (id) { return Fam && Fam.atual ? Fam.botaoPersonalizado(Fam.atual(), id) : null; };
+  function usarFonteBotoes(fn) { fonteBotao = fn; }
+  var OUTRO = { nome: 'Outro registro', icone: '📝', pergunta: '', campos: [], personalizado: true, desconhecido: true };
+  /* Esquema de qualquer tipo: os fixos vêm de ESQUEMAS; 'personalizado' vem do botão; desconhecido vira "Outro registro". */
+  function esquema(tipo, botao) {
+    if (tipo === 'personalizado') {
+      var b = typeof botao === 'string' ? fonteBotao(botao) : null;
+      return b ? Fam.esquemaDoBotao(b) : OUTRO;
+    }
+    return ESQUEMAS[tipo] || OUTRO;
+  }
   var HORA_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
   var DIA_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
   var UNIDADE_INSULINA = 'U';
@@ -97,11 +114,14 @@
      Campo vazio de insulina/glicose nunca dá erro. Valor digitado fora da faixa de digitação ainda é recusado
      (evita erro de dedo, ex.: 4000), mas isso não é "obrigatório": basta apagar o campo para salvar. */
   function montarDados(tipo, entrada) {
-    var esq = ESQUEMAS[tipo];
-    if (!esq) return { ok: false, dados: {}, erros: ['tipo inválido'] };
     entrada = entrada || {};
+    var esq = tipo === 'personalizado' ? esquema(tipo, entrada.botao) : ESQUEMAS[tipo];
+    if (!esq || esq.desconhecido) return { ok: false, dados: {}, erros: [tipo === 'personalizado' ? 'Esse botão não existe mais.' : 'tipo inválido'] };
     var dados = {}, erros = [];
+    if (tipo === 'personalizado') dados.botao = entrada.botao;
     esq.campos.forEach(function (c) {
+      // pergunta apagada: o valor antigo é mantido como está, sem exigir nada (registro antigo continua igual)
+      if (c.apagado) { if (!vazio(entrada[c.id])) dados[c.id] = entrada[c.id]; return; }
       if (!visivel(c, entrada)) return;
       var v = entrada[c.id];
       if (c.tipo === 'texto' || c.tipo === 'lista') v = typeof v === 'string' ? v.trim() : v;
@@ -150,9 +170,9 @@
 
   /* Texto curto para a lista do dia. Mostra só o que foi anotado, sem comentário. */
   function resumo(reg) {
-    var esq = ESQUEMAS[reg.tipo];
     var d = reg.dados || {};
-    if (!esq) return reg.tipo;
+    var esq = esquema(reg.tipo, d.botao);
+    if (esq.desconhecido) return esq.nome;
     var partes = [];
     esq.campos.forEach(function (c) {
       if (c.id === 'sistolica' || c.id === 'diastolica') return;
@@ -162,6 +182,7 @@
         : c.tipo === 'numero' ? numeroBr(v) : String(v);
       if (reg.tipo === 'insulina' && c.id === 'quantidade') t += ' ' + (d.unidade || UNIDADE_INSULINA);
       else if (c.sufixo) t += ' ' + c.sufixo;
+      else if (c.unidade) t += ' ' + c.unidade;
       partes.push(c.curto ? c.curto + ': ' + t : t);
     });
     if (reg.tipo === 'pressao') {
@@ -230,7 +251,8 @@
     return ult;
   }
 
-  var api = { ESQUEMAS: ESQUEMAS, TIPOS: TIPOS, visivel: visivel, montarDados: montarDados, resumo: resumo,
+  var api = { ESQUEMAS: ESQUEMAS, TIPOS: TIPOS, TIPOS_GRAVADOS: TIPOS_GRAVADOS, esquema: esquema, usarFonteBotoes: usarFonteBotoes,
+    visivel: visivel, montarDados: montarDados, resumo: resumo,
     limparNomes: limparNomes, adicionarNome: adicionarNome, removerNome: removerNome,
     combinarDataHora: combinarDataHora, combinarDiaHora: combinarDiaHora, somarDias: somarDias,
     horaLocal: horaLocal, ultimoRegistro: ultimoRegistro };

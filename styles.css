@@ -86,3 +86,14 @@ nav a { font-size: 13px; }
 /* Etapa C */
 .estado-sync { font-size: 16px; font-weight: 600; color: #1b4965; }
 .convite { margin-top: 10px; }
+
+/* Ajustes etapa 2 */
+.menu-ajustes { display: grid; gap: 12px; }
+a.item-menu { display: flex; align-items: center; min-height: 60px; padding: 10px 16px; border-radius: 16px; background: #fff;
+  border: 2px solid #c3d3dd; color: #0E2C5E; font-size: 20px; font-weight: 700; text-decoration: none; }
+a.voltar { display: inline-flex; align-items: center; min-height: 48px; margin-bottom: 8px; font-size: 18px; font-weight: 700; color: #1b4965; }
+.pergunta-box { border: 2px dashed #c3d3dd; border-radius: 14px; padding: 10px 12px; margin: 10px 0; }
+.form-pessoa input[type=text], .form-pessoa input[type=tel], .pergunta-box input { display: block; width: 100%; margin: 6px 0; }
+button.seta { min-width: 56px; font-size: 22px; }
+.botoes-lista li.oculto .quem-nome { opacity: .6; }
+.previa { font-size: 18px; background: #eef6fb; border-radius: 12px; padding: 10px; }

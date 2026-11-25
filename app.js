@@ -186,11 +186,15 @@
     tela.appendChild(blocoFalar());
     tela.appendChild(el('h2', 'O que você quer anotar?'));
     var g = el('div', '', { 'class': 'grade' });
-    R.TIPOS.forEach(function (t) {
+    // Botões na ordem e com os escondidos escolhidos em Ajustes → Botões da tela inicial (inclui os criados pela família).
+    DiarioFamilia.listaBotoes(DiarioFamilia.atual(), R.TIPOS, R.ESQUEMAS).filter(function (x) { return x.visivel; }).forEach(function (bt) {
       var b = el('button', '', { type: 'button', 'class': 'tipo' });
-      b.appendChild(el('span', R.ESQUEMAS[t].icone, { 'aria-hidden': 'true', 'class': 'icone' }));
-      b.appendChild(el('span', R.ESQUEMAS[t].nome));
-      b.addEventListener('click', function () { telaForm(t, null, hojeLocal()); });
+      b.appendChild(el('span', bt.icone, { 'aria-hidden': 'true', 'class': 'icone' }));
+      b.appendChild(el('span', bt.nome));
+      b.addEventListener('click', function () {
+        if (bt.personalizado) telaForm('personalizado', null, hojeLocal(), null, bt.id);
+        else telaForm(bt.id, null, hojeLocal());
+      });
       g.appendChild(b);
     });
     tela.appendChild(g);
@@ -306,9 +310,18 @@
   }
 
   /* reg = null (novo, no dia `diaNovo`) ou registro existente (editar qualquer um da lista) */
-  function telaForm(tipo, reg, diaNovo, pre) {
-    var esq = R.ESQUEMAS[tipo];
+  function telaForm(tipo, reg, diaNovo, pre, botao) {
+    if (tipo === 'personalizado' && !botao) botao = reg && reg.dados ? reg.dados.botao : null;
+    var esq = R.esquema(tipo, botao);
     limpar();
+    if (esq.desconhecido) {
+      tela.appendChild(el('h2', esq.nome));
+      tela.appendChild(el('p', 'O botão deste registro não existe mais neste celular, então não dá para mudar. Ele continua no diário e no relatório.', { 'class': 'dica' }));
+      var vb = el('button', 'Voltar', { type: 'button', 'class': 'secundario' });
+      vb.addEventListener('click', function () { history.back(); });
+      tela.appendChild(vb);
+      return;
+    }
     tela.appendChild(el('h2', (reg ? 'Mudar: ' : '') + esq.nome));
     tela.appendChild(el('p', esq.pergunta, { 'class': 'pergunta' }));
 
@@ -343,6 +356,7 @@
     lh.appendChild(hora);
 
     esq.campos.forEach(function (c) {
+      if (c.apagado) return; // pergunta apagada de botão criado: não aparece (o valor antigo fica guardado)
       var bloco = criarCampo(c, estado, aoMudar);
       blocos.push({ campo: c, bloco: bloco });
       if (c.detalhe) {
@@ -363,6 +377,7 @@
 
     ok.addEventListener('click', async function () {
       blocos.forEach(function (x) { if (x.bloco.lerPendente) x.bloco.lerPendente(); });
+      if (tipo === 'personalizado') estado.botao = botao;
       var res = R.montarDados(tipo, estado);
       if (!res.ok) { erroEl.textContent = res.erros.join('. ') + '.'; return; }
       var dataHora;
@@ -446,9 +461,10 @@
     document.getElementById('nav-dia').className = m ? 'ativo' : '';
     var ne = document.getElementById('nav-estat'); if (ne) ne.className = h === '#/estatisticas' ? 'ativo' : '';
     var nr = document.getElementById('nav-rel'); if (nr) nr.className = h === '#/relatorio' ? 'ativo' : '';
-    var na = document.getElementById('nav-ajustes'); if (na) na.className = h === '#/ajustes' ? 'ativo' : '';
-    if (h === '#/estatisticas' || h === '#/relatorio' || h === '#/ajustes') document.getElementById('nav-inicio').className = '';
-    if (h === '#/ajustes') DiarioAjustesTela.mostrar();
+    var ajustes = h === '#/ajustes' || h.indexOf('#/ajustes/') === 0;
+    var na = document.getElementById('nav-ajustes'); if (na) na.className = ajustes ? 'ativo' : '';
+    if (h === '#/estatisticas' || h === '#/relatorio' || ajustes) document.getElementById('nav-inicio').className = '';
+    if (ajustes) DiarioAjustesTela.mostrar(h.split('/')[2] || '');
     else if (h === '#/estatisticas') DiarioEstatisticasTela.mostrar();
     else if (h === '#/relatorio') DiarioRelatorioTela.mostrar();
     else if (m) telaDia(m[1] || hojeLocal()).catch(function (e) { dizer('Erro: ' + e.message); });

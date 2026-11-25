@@ -116,10 +116,21 @@
     return String(v);
   }
 
+  /* Nome do tipo no PDF. Botão criado pela família: nome do botão sem emoji (a fonte do PDF não tem emoji). */
+  function nomeTipo(r) {
+    if (TIPOS[r.tipo]) return TIPOS[r.tipo];
+    if (r.tipo === 'personalizado' && R.esquema) {
+      var e = R.esquema(r.tipo, (r.dados || {}).botao);
+      if (!e.desconhecido) return (root.DiarioFamilia ? root.DiarioFamilia.semEmoji(e.nome) : e.nome) || 'Outro registro';
+    }
+    return 'Outro registro';
+  }
+
   /* Detalhes de um registro, com os nomes amigáveis. Só mostra o que foi anotado. */
   function detalhe(r) {
     var d = r.dados || {};
-    var esq = R.ESQUEMAS[r.tipo];
+    var esq = R.esquema ? R.esquema(r.tipo, d.botao) : R.ESQUEMAS[r.tipo];
+    if (esq && esq.desconhecido) esq = null;
     var partes = [];
     if (esq) {
       esq.campos.forEach(function (c) {
@@ -271,7 +282,7 @@
     if (!lista.length) par('Nenhum registro.');
     else {
       tabela([17, 7, 20, 46], ['Data e hora', 'Quem', 'Tipo', 'Detalhes'], lista.map(function (r) {
-        return [fmtDataHora(new Date(r.dataHora)), quem(r), TIPOS[r.tipo] || 'Outro registro', detalhe(r)];
+        return [fmtDataHora(new Date(r.dataHora)), quem(r), nomeTipo(r), detalhe(r)];
       }));
     }
 

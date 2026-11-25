@@ -1,7 +1,7 @@
 /* Service worker: guarda a casca do app para abrir sem internet. Mudou arquivo? Aumente VERSAO.
-   v11 (24/11): endereço do servidor da família e CSP exata. v10 (22/11): etapa C, família conectada (config.js, regras.js, sync.js). v9 (22/11): etapa B, modelo sobre/anotadoPor e store arquivos. v8 (22/11): voz.js. v7: ícone novo Atlas Saúde. T-0035-5: v6 — entram os ícones SVG. Os PNG ficam FORA da lista de propósito: se um PNG faltasse,
+   v12 (25/11): ajustes etapa 2 (menu, família com telefone, botões, botões criados, mensagens). v11 (24/11): endereço do servidor da família e CSP exata. v10 (22/11): etapa C, família conectada (config.js, regras.js, sync.js). v9 (22/11): etapa B, modelo sobre/anotadoPor e store arquivos. v8 (22/11): voz.js. v7: ícone novo Atlas Saúde. T-0035-5: v6 — entram os ícones SVG. Os PNG ficam FORA da lista de propósito: se um PNG faltasse,
    cache.addAll falharia e o app nem instalaria o modo sem internet. O teste offline.test.js confere esta lista contra o index.html. */
-var VERSAO = 'diario-saude-v11';
+var VERSAO = 'diario-saude-v12';
 var ARQUIVOS = ['./', 'index.html', 'styles.css', 'app.js', 'db.js', 'registros.js', 'estatisticas.js', 'estatisticas-tela.js', 'relatorio.js', 'relatorio-tela.js', 'voz.js', 'familia.js', 'ajustes-tela.js', 'config.js', 'regras.js', 'sync.js', 'manifest.json', 'icon.svg', 'icon-maskable.svg'];
 
 self.addEventListener('install', function (e) {

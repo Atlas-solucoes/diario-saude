@@ -10,7 +10,7 @@
   'use strict';
   var VERSAO_MODELO = 3;
   var VERSAO_BANCO = 3;
-  var TIPOS = ['alimentacao', 'exercicio', 'emocao', 'sono', 'diferente', 'nausea', 'tontura', 'pressao', 'insulina', 'glicose'];
+  var TIPOS = ['alimentacao', 'exercicio', 'emocao', 'sono', 'diferente', 'nausea', 'tontura', 'pressao', 'insulina', 'glicose', 'personalizado'];
   var PESSOAS = ['filha', 'pai', 'mae']; // papéis iniciais, nunca nomes (a família pode acrescentar outros ids)
   var SOBRE_PADRAO = 'acompanhada'; // id da pessoa acompanhada no MVP (1 pessoa)
   var ID_PESSOA = /^[a-z0-9_-]{1,40}$/;

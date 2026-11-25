@@ -38,8 +38,10 @@
     /* Aplica o documento da família vindo do servidor (só o responsável edita; os outros recebem). */
     function aplicarFamilia(doc) {
       var atual = F.ler(armazem);
+      // Tudo do documento vem do responsável; "este celular é de" e a foto (id local) ficam deste aparelho.
       var n = F.normalizar({ acompanhada: Object.assign({}, doc.acompanhada || {}, { fotoId: atual.acompanhada.fotoId }),
-        familia: doc.familia, esteCelular: atual.esteCelular });
+        familia: doc.familia, esteCelular: atual.esteCelular, botoes: doc.botoes, ocultos: doc.ocultos,
+        botoesPersonalizados: doc.botoesPersonalizados, mensagens: doc.mensagens });
       F.gravar(armazem, n);
     }
     function base64ParaBlob(b64, mime) {
@@ -140,7 +142,8 @@
         if (!c.responsavel || !conectado()) return;
         var f = F.ler(armazem);
         var v = (c.familiaVersao || 0) + 1;
-        var doc = { acompanhada: { apelido: f.acompanhada.apelido, emoji: f.acompanhada.emoji }, familia: f.familia };
+        var doc = { acompanhada: { apelido: f.acompanhada.apelido, emoji: f.acompanhada.emoji }, familia: f.familia,
+          botoes: f.botoes, ocultos: f.ocultos, botoesPersonalizados: f.botoesPersonalizados, mensagens: f.mensagens };
         var r = await pedir('/api/familia', { doc: doc, versao: v }, true);
         // Responsável novo (código trocado) começa da versão 0: o servidor ignora e conta a dele; reenvia uma vez acima dela.
         if (!r.aceito) r = await pedir('/api/familia', { doc: doc, versao: r.versao + 1 }, true);
