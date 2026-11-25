@@ -290,6 +290,7 @@ class VigiaActivity : Activity() {
         emSegundoPlano {
             tels.forEach { Sms.enviar(this, it, Mensagens.teste(), contarNoTeto = true) }
             Armazem(this).testouMs = System.currentTimeMillis()
+            if (Armazem(this).aviso.startsWith("Alarme visto")) Armazem(this).aviso = ""
             "📨 SMS de teste enviado para ${tels.size} pessoa(s). Confira se chegou."
         }
     }

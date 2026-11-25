@@ -152,6 +152,8 @@ object Servidor {
             val nova = LeitorConfig.ler(txt) ?: return "A família ainda não salvou a configuração das mensagens."
             val antiga = a.config()
             a.configJson = txt
+            // aviso velho ("ninguém marcado", "configuração não baixada") não fica pendurado depois de corrigido
+            if (nova.telefonesAlerta().isNotEmpty() && a.aviso.startsWith("Alarme visto")) a.aviso = ""
             if (LeitorConfig.mudouQuemRecebe(antiga, nova)) {
                 // ninguém sai da lista em silêncio: avisa quem recebia e quem passa a receber
                 (antiga!!.telefonesAlerta() + nova.telefonesAlerta()).distinct().forEach { Sms.enviar(ctx, it, Mensagens.listaMudou(), contarNoTeto = true) }
