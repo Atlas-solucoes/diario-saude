@@ -74,10 +74,14 @@ jobs:
           CRIAR: ${{ github.event.inputs.criar_chave }}
         run: |
           [ ${#SENHA} -ge 20 ] || { echo "Falta o segredo ANDROID_SENHA (frase com 20 ou mais caracteres)"; exit 1; }
+          # a keystore só aceita senha ASCII: usa o SHA-256 da frase (a frase pode ter acento e símbolos)
+          KSPASS=$(printf '%s' "$SENHA" | sha256sum | cut -c1-64); export KSPASS
+          echo "::add-mask::$KSPASS"
+          echo "SENTINELA_SENHA=$KSPASS" >> "$GITHUB_ENV"
           if [ ! -f assinatura.enc ]; then
             [ "$CRIAR" = "CRIAR CHAVE" ] || { echo "Ainda não existe chave de assinatura. Rode este workflow à mão (Run workflow) digitando CRIAR CHAVE."; exit 1; }
             keytool -genkeypair -keystore /tmp/sentinela.jks -storetype PKCS12 -alias sentinela -keyalg RSA -keysize 4096 -validity 36500 \
-              -storepass:env SENHA -keypass:env SENHA -dname "CN=Atlas Saude Sentinela, O=Atlas Solucoes, C=BR"
+              -storepass:env KSPASS -keypass:env KSPASS -dname "CN=Atlas Saude Sentinela, O=Atlas Solucoes, C=BR"
             openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -in /tmp/sentinela.jks -out assinatura.enc -pass env:SENHA
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -91,7 +95,6 @@ jobs:
       - name: Montar APK assinado
         if: steps.pronto.outputs.ok == 'true'
         env:
-          SENTINELA_SENHA: ${{ secrets.ANDROID_SENHA }}
           VERSAO_CODIGO: ${{ github.run_number }}
         run: |
           trap 'rm -f /tmp/sentinela.jks' EXIT
