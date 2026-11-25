@@ -41,6 +41,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
+    // mostra cada teste no registro do GitHub Actions (prova de que rodou)
+    testOptions { unitTests.all { it.testLogging { events("passed", "failed"); showStandardStreams = false } } }
 }
 
 dependencies {
