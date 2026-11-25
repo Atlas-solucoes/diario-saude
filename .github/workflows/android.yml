@@ -46,11 +46,29 @@ jobs:
     defaults: { run: { working-directory: android, shell: bash } }
     steps:
       - uses: actions/checkout@v4
+      - name: Pronto para publicar? (sem segredo ou sem chave = aviso, não erro)
+        id: pronto
+        env:
+          SENHA: ${{ secrets.ANDROID_SENHA }}
+          CRIAR: ${{ github.event.inputs.criar_chave }}
+        run: |
+          if [ ${#SENHA} -lt 20 ]; then
+            echo "::notice::App montado e testado. Para publicar: cadastre o segredo ANDROID_SENHA (20+ caracteres) e rode este workflow digitando CRIAR CHAVE."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          elif [ ! -f assinatura.enc ] && [ "$CRIAR" != "CRIAR CHAVE" ]; then
+            echo "::notice::Falta criar a chave de assinatura: rode este workflow à mão (Run workflow) digitando CRIAR CHAVE."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-java@v4
+        if: steps.pronto.outputs.ok == 'true'
         with: { distribution: temurin, java-version: '17' }
       - uses: gradle/actions/setup-gradle@v4
+        if: steps.pronto.outputs.ok == 'true'
         with: { gradle-version: '8.11.1' }
       - name: Chave de assinatura (cifrada no repo; criada só com CRIAR CHAVE)
+        if: steps.pronto.outputs.ok == 'true'
         env:
           SENHA: ${{ secrets.ANDROID_SENHA }}
           CRIAR: ${{ github.event.inputs.criar_chave }}
@@ -71,6 +89,7 @@ jobs:
           fi
           echo "SENTINELA_KEYSTORE=/tmp/sentinela.jks" >> "$GITHUB_ENV"
       - name: Montar APK assinado
+        if: steps.pronto.outputs.ok == 'true'
         env:
           SENTINELA_SENHA: ${{ secrets.ANDROID_SENHA }}
           VERSAO_CODIGO: ${{ github.run_number }}
@@ -78,6 +97,7 @@ jobs:
           trap 'rm -f /tmp/sentinela.jks' EXIT
           gradle --no-daemon :app:assembleRelease
       - name: Publicar no Release (com a impressão da assinatura)
+        if: steps.pronto.outputs.ok == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           N: ${{ github.run_number }}
