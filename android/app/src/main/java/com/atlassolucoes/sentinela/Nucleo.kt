@@ -54,6 +54,19 @@ class Armazem(ctx: Context) {
     var ultimoRepasse: String get() = p.getString("ultimoRepasse", "") ?: ""; set(v) { p.edit().putString("ultimoRepasse", v).apply() }
     var aviso: String get() = p.getString("aviso", "") ?: ""; set(v) { p.edit().putString("aviso", v).apply() }
 
+    /** Vigia ligado NESTE celular? Sem isso nada é repassado (o app do pai/mãe/irmão/Dinda nunca manda SMS).
+     *  Quem veio da v7 já configurada (tinha token) continua ligado. */
+    var vigiaAtivo: Boolean
+        get() = PonteRegras.vigiaAtivo(if (p.contains("vigiaAtivo")) p.getBoolean("vigiaAtivo", false) else null, p.getString("token", null) != null)
+        set(v) { p.edit().putBoolean("vigiaAtivo", v).apply() }
+    /** Assistente do vigia: já passou das boas-vindas? já mandou o SMS de teste? */
+    var comecou: Boolean get() = p.getBoolean("comecou", false); set(v) { p.edit().putBoolean("comecou", v).apply() }
+    var testouMs: Long get() = p.getLong("testou", 0L); set(v) { p.edit().putLong("testou", v).apply() }
+    /** O Android negou (configuração restrita)? Aí o assistente mostra o "destravar". */
+    var negadoNotif: Boolean get() = p.getBoolean("negadoNotif", false); set(v) { p.edit().putBoolean("negadoNotif", v).apply() }
+    var negadoSms: Boolean get() = p.getBoolean("negadoSms", false); set(v) { p.edit().putBoolean("negadoSms", v).apply() }
+    var pediuSms: Boolean get() = p.getBoolean("pediuSms", false); set(v) { p.edit().putBoolean("pediuSms", v).apply() }
+
     fun config(): Config? = configJson?.let { LeitorConfig.ler(it) }
 
     fun guardarLeitura(l: Leitura, ms: Long) {
@@ -152,6 +165,7 @@ object Sms {
     /** Envia 1 SMS pelo chip padrão. Se não sair (sem sinal), vai para a fila. */
     fun enviar(ctx: Context, tel: String, msg: String, contarNoTeto: Boolean, desdeMs: Long = System.currentTimeMillis()) {
         val a = Armazem(ctx)
+        if (!a.vigiaAtivo) return // trava única: celular sem vigia ligado nunca manda SMS
         if (contarNoTeto) {
             val (pode, e) = Freios.contar(a.freios, dia(System.currentTimeMillis()), 1)
             a.freios = e
@@ -184,6 +198,7 @@ class ResultadoSms : BroadcastReceiver() {
 object Central {
     fun repassar(ctx: Context, r: Reconhecido, agora: Long) {
         val a = Armazem(ctx)
+        if (!a.vigiaAtivo) return
         val cfg = a.config()
         if (cfg == null) { a.aviso = "Alarme visto, mas a configuração da família ainda não foi baixada: nada foi enviado."; return }
         val tels = cfg.telefonesAlerta()
@@ -209,6 +224,7 @@ class Verificador(ctx: Context, params: WorkerParameters) : Worker(ctx, params) 
     override fun doWork(): Result {
         val ctx = applicationContext
         val a = Armazem(ctx)
+        if (!a.vigiaAtivo) return Result.success()
         val agora = System.currentTimeMillis()
         a.verificadorMs = agora
         if (a.token != null) Servidor.atualizarConfig(ctx)

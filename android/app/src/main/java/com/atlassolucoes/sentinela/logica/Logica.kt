@@ -230,3 +230,61 @@ object Vida {
     fun estaNaHora(vidaHoras: Int, ultimaMs: Long, agoraMs: Long): Boolean =
         vidaHoras > 0 && agoraMs - ultimaMs >= vidaHoras * Freios.HORA_MS - 5 * 60 * 1000L
 }
+
+/* ---------- Assistente de primeira vez: qual passo mostrar (puro, testado) ---------- */
+
+enum class Etapa { BOAS_VINDAS, NOTIFICACOES, SMS, BATERIA, FAMILIA, TESTE, PRONTO }
+
+data class Situacao(
+    val comecou: Boolean, val notificacoes: Boolean, val sms: Boolean,
+    val bateria: Boolean, val naFamilia: Boolean, val testou: Boolean
+)
+
+object Etapas {
+    /** Passos numerados que aparecem na barra de progresso (sem boas-vindas e sem "pronto"). */
+    val numeradas = listOf(Etapa.NOTIFICACOES, Etapa.SMS, Etapa.BATERIA, Etapa.FAMILIA, Etapa.TESTE)
+
+    /** O primeiro que falta. Se algo se perder depois (ex.: tiraram o acesso), volta para aquele passo. */
+    fun proxima(s: Situacao): Etapa = when {
+        !s.comecou -> Etapa.BOAS_VINDAS
+        !s.notificacoes -> Etapa.NOTIFICACOES
+        !s.sms -> Etapa.SMS
+        !s.bateria -> Etapa.BATERIA
+        !s.naFamilia -> Etapa.FAMILIA
+        !s.testou -> Etapa.TESTE
+        else -> Etapa.PRONTO
+    }
+
+    /** 1..5 para os passos numerados; 0 para boas-vindas e pronto. */
+    fun numero(e: Etapa): Int = numeradas.indexOf(e) + 1
+
+    /** Convite: só letras e números, maiúsculo, 8 caracteres; mostra como ABCD-2345. */
+    fun limparConvite(t: String): String = t.uppercase().filter { it in 'A'..'Z' || it in '0'..'9' }.take(8)
+    fun mostrarConvite(t: String): String { val c = limparConvite(t); return if (c.length > 4) c.substring(0, 4) + "-" + c.substring(4) else c }
+}
+
+/* ---------- App único: regras da ponte site ↔ Android (puras, testadas) ---------- */
+
+object PonteRegras {
+    /** Endereço do Atlas Saúde publicado. O domínio sozinho não basta: atlas-solucoes.github.io tem outros sites. */
+    const val SITE = "https://atlas-solucoes.github.io/diario-saude/"
+
+    /** A página aberta é o nosso site? (só https, só esse caminho; sem truques de usuário@host ou ../) */
+    fun origemPermitida(url: String?): Boolean {
+        if (url == null || !url.startsWith(SITE)) return false
+        val resto = url.substring(SITE.length)
+        return !resto.contains("..") && !resto.contains("\\")
+    }
+
+    /** Vigia ligado? Quem já tinha configurado o Sentinela (v7, com token) continua ligado depois da atualização. */
+    fun vigiaAtivo(guardado: Boolean?, temTokenAntigo: Boolean): Boolean = guardado ?: temTokenAntigo
+
+    /** Token de aparelho que o site entrega: formato simples, tamanho razoável. */
+    fun tokenValido(t: String?): Boolean = t != null && t.length in 16..200 && t.all { it.isLetterOrDigit() || it in "-_." }
+
+    /** Nome de arquivo seguro para salvar em Downloads. */
+    fun nomeArquivo(n: String?): String {
+        val limpo = (n ?: "").replace(Regex("[^A-Za-z0-9._-]"), "-").trim('-', '.').take(80)
+        return limpo.ifEmpty { "atlas-saude" }
+    }
+}

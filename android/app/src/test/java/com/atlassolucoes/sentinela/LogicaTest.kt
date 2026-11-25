@@ -111,4 +111,51 @@ class LogicaTest {
         assertTrue(Vida.estaNaHora(2, 0, 2 * Freios.HORA_MS))
         assertFalse(Vida.estaNaHora(2, 0, Freios.HORA_MS))
     }
+
+    @Test fun assistenteMostraOPrimeiroPassoQueFalta() {
+        val tudo = Situacao(true, true, true, true, true, true)
+        assertEquals(Etapa.PRONTO, Etapas.proxima(tudo))
+        assertEquals(Etapa.BOAS_VINDAS, Etapas.proxima(tudo.copy(comecou = false)))
+        assertEquals(Etapa.NOTIFICACOES, Etapas.proxima(tudo.copy(notificacoes = false, sms = false)))
+        assertEquals(Etapa.SMS, Etapas.proxima(tudo.copy(sms = false, bateria = false)))
+        assertEquals(Etapa.BATERIA, Etapas.proxima(tudo.copy(bateria = false)))
+        assertEquals(Etapa.FAMILIA, Etapas.proxima(tudo.copy(naFamilia = false, testou = false)))
+        assertEquals(Etapa.TESTE, Etapas.proxima(tudo.copy(testou = false)))
+        // perdeu o acesso depois de pronto: volta para o passo
+        assertEquals(Etapa.NOTIFICACOES, Etapas.proxima(tudo.copy(notificacoes = false)))
+        assertEquals(1, Etapas.numero(Etapa.NOTIFICACOES)); assertEquals(5, Etapas.numero(Etapa.TESTE)); assertEquals(0, Etapas.numero(Etapa.PRONTO))
+    }
+
+    @Test fun conviteLimpoEFormatado() {
+        assertEquals("ABCD2345", Etapas.limparConvite(" abcd-2345 "))
+        assertEquals("ABCD-2345", Etapas.mostrarConvite("abcd2345xyz"))
+        assertEquals("AB", Etapas.mostrarConvite("a-b"))
+    }
+
+    @Test fun ponteSoParaONossoSite() {
+        assertTrue(PonteRegras.origemPermitida("https://atlas-solucoes.github.io/diario-saude/"))
+        assertTrue(PonteRegras.origemPermitida("https://atlas-solucoes.github.io/diario-saude/#/ajustes/vigia"))
+        assertFalse(PonteRegras.origemPermitida("https://atlas-solucoes.github.io/outro-site/"))
+        assertFalse(PonteRegras.origemPermitida("https://atlas-solucoes.github.io/diario-saude-falso/"))
+        assertFalse(PonteRegras.origemPermitida("http://atlas-solucoes.github.io/diario-saude/"))
+        assertFalse(PonteRegras.origemPermitida("https://atlas-solucoes.github.io/diario-saude/../outro/"))
+        assertFalse(PonteRegras.origemPermitida("https://atlas-solucoes.github.io.mal.com/diario-saude/"))
+        assertFalse(PonteRegras.origemPermitida(null))
+    }
+
+    @Test fun atualizacaoNaoDesligaOVigia() {
+        assertTrue(PonteRegras.vigiaAtivo(null, temTokenAntigo = true))   // veio da v7 configurada
+        assertFalse(PonteRegras.vigiaAtivo(null, temTokenAntigo = false)) // instalação nova: pergunta antes
+        assertFalse(PonteRegras.vigiaAtivo(false, temTokenAntigo = true)) // desligado de propósito
+        assertTrue(PonteRegras.vigiaAtivo(true, temTokenAntigo = false))
+    }
+
+    @Test fun tokenENomeDeArquivo() {
+        assertTrue(PonteRegras.tokenValido("abcDEF0123456789_-x"))
+        assertFalse(PonteRegras.tokenValido("curto"))
+        assertFalse(PonteRegras.tokenValido("tem espaco no meio 12345"))
+        assertEquals("relatorio-2026.pdf", PonteRegras.nomeArquivo("relatorio-2026.pdf"))
+        assertEquals("a-b-c.pdf", PonteRegras.nomeArquivo("../a/b c.pdf").trimStart('-'))
+        assertEquals("atlas-saude", PonteRegras.nomeArquivo(""))
+    }
 }

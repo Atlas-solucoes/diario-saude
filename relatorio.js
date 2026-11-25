@@ -349,16 +349,38 @@
   /* Só no navegador: salva/abre o PDF no próprio aparelho (Blob local; nada é enviado). */
   function baixarPDF(registros, opcoes, nome) {
     var r = gerarPDF(registros, opcoes);
-    var url = URL.createObjectURL(new Blob([r.bytes], { type: 'application/pdf' }));
-    var a = document.createElement('a');
-    a.href = url; a.download = nome || ('relatorio-' + opcoes.de + '-a-' + opcoes.ate + '.pdf');
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+    salvarNoAparelho(new Blob([r.bytes], { type: 'application/pdf' }), nome || ('relatorio-' + opcoes.de + '-a-' + opcoes.ate + '.pdf'));
     return r;
   }
 
+  /* Salva um arquivo no aparelho. No app Android (WebView) o "baixar" do navegador não funciona:
+     o arquivo vai pela ponte (AtlasNativo.salvarArquivo) para Downloads. Devolve Promise<'ok'|mensagem>. */
+  function salvarNoAparelho(blob, nome) {
+    var nativo = typeof window !== 'undefined' ? window.AtlasNativo : null;
+    if (nativo && nativo.salvarArquivo) {
+      return new Promise(function (ok) {
+        var leitor = new FileReader();
+        leitor.onload = function () {
+          var b64 = String(leitor.result).split(',')[1] || '';
+          var r = 'ok';
+          try { r = nativo.salvarArquivo(nome, blob.type, b64); } catch (e) { r = 'Não deu para salvar.'; }
+          if (r !== 'ok') alert(r);
+          ok(r);
+        };
+        leitor.onerror = function () { alert('Não deu para ler o arquivo.'); ok('erro'); };
+        leitor.readAsDataURL(blob);
+      });
+    }
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = nome;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+    return Promise.resolve('ok');
+  }
+
   var api = { AVISO: AVISO, filtrarPeriodo: filtrarPeriodo, resumir: resumir, detalhe: detalhe, montarLinhas: montarLinhas,
-    montarPDF: montarPDF, gerarPDF: gerarPDF, baixarPDF: baixarPDF, intervalo: intervalo };
+    montarPDF: montarPDF, gerarPDF: gerarPDF, baixarPDF: baixarPDF, salvarNoAparelho: salvarNoAparelho, intervalo: intervalo };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DiarioRelatorio = api;
 })(typeof self !== 'undefined' ? self : globalThis);

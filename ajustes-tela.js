@@ -7,7 +7,7 @@
   var F = DiarioFamilia;
   var store = DiarioDB.criarStore(DiarioDB.criarIndexedDB('diario-saude'));
   var tela = document.getElementById('tela');
-  var VERSAO_APP = '1.1 (ajustes: botões, família, mensagens)';
+  var VERSAO_APP = '1.2 (app Android com vigia)';
   var FOTO_LADO = 256;
   var FOTO_MAX = 40 * 1024;
   var DATA_URL = /^data:(image\/(?:jpeg|png|webp)|application\/pdf);base64,([A-Za-z0-9+\/=]+)$/;
@@ -449,15 +449,12 @@
     var kb = Math.max(1, Math.round(blob.size / 1024)) + ' KB';
     // No celular (principalmente iPhone instalado na tela inicial), "Compartilhar" é o jeito que funciona: salvar em Arquivos, Drive…
     var arq = typeof File === 'function' ? new File([blob], nome, { type: 'application/json' }) : null;
-    if (arq && navigator.canShare && navigator.canShare({ files: [arq] })) {
+    if (!window.AtlasNativo && arq && navigator.canShare && navigator.canShare({ files: [arq] })) {
       try { await navigator.share({ files: [arq], title: 'Cópia do Diário de Saúde' }); dizer('Cópia pronta (' + kb + '). Guarde num lugar seguro.'); return; }
       catch (e) { if (e && e.name === 'AbortError') { dizer('Cópia cancelada.'); return; } }
     }
-    var u = URL.createObjectURL(blob);
-    var link = el('a', '', { href: u, download: nome });
-    document.body.appendChild(link); link.click(); link.remove();
-    setTimeout(function () { URL.revokeObjectURL(u); }, 60000);
-    dizer('Cópia pronta (' + kb + '). Guarde num lugar seguro.');
+    var r = await window.DiarioRelatorio.salvarNoAparelho(blob, nome);
+    if (r === 'ok') dizer('Cópia pronta (' + kb + '). Guarde num lugar seguro.');
   }
   /* Só aceita data:<formato permitido>;base64 e o formato precisa ser o mesmo do campo mime. Nunca busca endereço de fora. */
   function textoParaBlob(texto, mime) {
@@ -559,6 +556,20 @@
     ['mensagens', '📩 Mensagens para a família'], ['conectada', '🔗 Família conectada'], ['celular', '📱 Este celular é de…'],
     ['copia', '💾 Cópia de segurança'], ['sobre', 'ℹ️ Sobre e aviso']
   ];
+  /* Só no app Android: o vigia dos alarmes (tela nativa). Mostra ✅ ligado / ⚠️ o que falta. */
+  function estadoVigia() {
+    try { return JSON.parse(window.AtlasNativo.estadoVigia() || '{}'); } catch (e) { return {}; }
+  }
+  function itemVigia() {
+    if (!window.AtlasNativo || !window.AtlasNativo.abrirVigia) return null;
+    var e = estadoVigia();
+    var rot = !e.ativo ? '🛡️ Vigia dos alarmes (desligado)' : e.pronto ? '🛡️ Vigia dos alarmes ✅' : '🛡️ Vigia dos alarmes ⚠️ ' + (e.falta || '');
+    var a = el('a', rot, { href: '#/ajustes', 'class': 'item-menu' });
+    a.addEventListener('click', function (ev) { ev.preventDefault(); window.AtlasNativo.abrirVigia(); });
+    return a;
+  }
+  // volta da tela do vigia: redesenha o menu com o estado novo
+  window.addEventListener('atlasnativo', function () { if (location.hash === '#/ajustes' || location.hash === '#/ajustes/') mostrar(''); });
   function travar(k) {
     Array.prototype.forEach.call(k.querySelectorAll('button, input'), function (b) { b.disabled = true; });
     k.appendChild(el('p', '🔒 Quem muda isso é o responsável da família. As mudanças dele chegam aqui sozinhas.', { 'class': 'dica' }));
@@ -578,6 +589,8 @@
         if (p[0] === 'celular' && motor() && motor().conectado()) return; // conectado: definido pelo convite
         nav.appendChild(el('a', p[1], { href: '#/ajustes/' + p[0], 'class': 'item-menu' }));
       });
+      var vig = itemVigia();
+      if (vig) nav.insertBefore(vig, nav.firstChild);
       tela.appendChild(nav);
       return;
     }

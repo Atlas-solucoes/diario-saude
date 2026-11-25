@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Só o necessário: internet (baixar a configuração), SMS (repassar), notificações, bateria. Sem localização. -->
+    <!-- App único Atlas Saúde: diário (site no WebView) + vigia. Só o necessário: internet, SMS (repassar), notificações, bateria. Sem localização. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -11,16 +11,20 @@
         android:name=".App"
         android:allowBackup="false"
         android:label="@string/app_name"
-        android:icon="@android:drawable/ic_dialog_info"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="false"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        android:theme="@style/Tema">
 
-        <activity android:name=".MainActivity" android:exported="true">
+        <activity android:name=".MainActivity" android:exported="true"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity android:name=".VigiaActivity" android:exported="false" android:label="Vigia" />
 
         <!-- Ouve as notificações (só lê; nunca dispensa nem adia nada). O Android religa sozinho depois de reiniciar. -->
         <service

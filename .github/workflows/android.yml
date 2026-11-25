@@ -110,7 +110,8 @@ jobs:
           D=$("$ANDROID_HOME/build-tools/$AS/apksigner" verify --print-certs "$APK" | grep -m1 'SHA-256 digest' | sed 's/.*: //')
           IMP=$(echo "$D" | tr 'a-f' 'A-F' | sed 's/../&:/g; s/:$//')
           test -n "$IMP" || { echo "Não consegui ler a assinatura do APK"; exit 1; }
-          cp "$APK" /tmp/atlas-saude-sentinela.apk
-          printf 'App Android Atlas Saúde Sentinela, versão 0.1.%s.\n\nImpressão SHA-256 da assinatura (deve ser igual à mostrada no fim da tela do app):\n\n%s\n\nInstalar só pelo link do Release mais recente deste repositório.\n' "$N" "$IMP" > /tmp/notas.md
-          gh release create "sentinela-v$N" /tmp/atlas-saude-sentinela.apk --title "Sentinela 0.1.$N" --notes-file /tmp/notas.md --latest
+          cp "$APK" /tmp/atlas-saude.apk
+          cp "$APK" /tmp/atlas-saude-sentinela.apk # nome antigo: o link já enviado continua funcionando
+          printf 'App Android Atlas Saúde (diário + vigia dos alarmes), versão 0.2.%s.\n\nImpressão SHA-256 da assinatura (deve ser igual à de Vigia → Detalhes técnicos):\n\n%s\n\nInstalar só pelo link do Release mais recente deste repositório.\n' "$N" "$IMP" > /tmp/notas.md
+          gh release create "sentinela-v$N" /tmp/atlas-saude.apk /tmp/atlas-saude-sentinela.apk --title "Atlas Saúde Android 0.2.$N" --notes-file /tmp/notas.md --latest
           echo "Impressão: $IMP" >> "$GITHUB_STEP_SUMMARY"

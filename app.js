@@ -36,7 +36,8 @@
      Os dois começam DESLIGADOS. Falar para anotar usa o reconhecimento do navegador: no Chrome do Android
      o áudio vai para o Google transcrever (aviso na tela). Nada é salvo sem tocar em Salvar. */
   var CHAVE_VOZ = 'diario-saude-voz';
-  var SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  // Dentro do app Android (WebView) o reconhecimento de fala do navegador não funciona: usa o microfone do teclado.
+  var SR = window.AtlasNativo ? null : (window.SpeechRecognition || window.webkitSpeechRecognition || null);
   var TEM_FALA = 'speechSynthesis' in window;
   function lerVoz() { try { var v = JSON.parse(localStorage.getItem(CHAVE_VOZ) || '{}'); return { entrada: !!v.entrada, saida: !!v.saida }; } catch (e) { return { entrada: false, saida: false }; } }
   function gravarVoz(v) { try { localStorage.setItem(CHAVE_VOZ, JSON.stringify(v)); } catch (e) { dizer('Não deu para guardar o ajuste de voz.'); } }

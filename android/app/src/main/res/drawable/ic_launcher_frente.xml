@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Convertido à mão de app/icon.svg (Atlas Saúde). Área segura do ícone adaptativo: conteúdo reduzido a 62% e centrado. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="512" android:viewportHeight="512">
+    <group android:scaleX="0.62" android:scaleY="0.62" android:pivotX="256" android:pivotY="256">
+        <path android:fillColor="#FFFFFF" android:pathData="M104,397L212,119h52l-95,278Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M248,119l53,0l107,278h-65Z" />
+        <path android:fillColor="#F7A81B" android:pathData="M220,99h72l12,31h-96Z" />
+        <group android:pivotX="256" android:pivotY="316" android:scaleX="1.28" android:scaleY="1.28" android:translateY="2">
+            <path android:strokeColor="#17458F" android:strokeWidth="9"
+                android:pathData="M256,360C220,336 206,318 206,299c0,-15 11,-26 25,-26 11,0 19,6 25,15 6,-9 14,-15 25,-15 14,0 25,11 25,26 0,19 -14,37 -50,61Z" />
+            <path android:fillColor="#F7A81B"
+                android:pathData="M256,360C220,336 206,318 206,299c0,-15 11,-26 25,-26 11,0 19,6 25,15 6,-9 14,-15 25,-15 14,0 25,11 25,26 0,19 -14,37 -50,61Z" />
+        </group>
+        <path android:strokeColor="#0E2C5E" android:strokeWidth="15" android:strokeLineCap="round" android:strokeLineJoin="round"
+            android:pathData="M214,318H234L250,288L266,344L280,318H298" />
+    </group>
+</vector>

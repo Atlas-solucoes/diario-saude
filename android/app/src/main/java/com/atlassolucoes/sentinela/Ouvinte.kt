@@ -28,6 +28,7 @@ class Ouvinte : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         val pacote = sbn.packageName ?: return
         if (!Reconhecedor.ehAbbott(pacote)) return
+        if (!Armazem(applicationContext).vigiaAtivo) return
         val ex = sbn.notification?.extras ?: return
         val titulo = ex.getCharSequence(Notification.EXTRA_TITLE)?.toString()
         val texto = (ex.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: ex.getCharSequence(Notification.EXTRA_TEXT))?.toString()

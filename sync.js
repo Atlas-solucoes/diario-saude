@@ -1,7 +1,7 @@
 /* Etapa C: família conectada. Envia a fila e recebe o que mudou no servidor da família (Cloudflare Worker).
    Primeiro envia, depois baixa (regra Y2 do Engenheiro). Sem internet, nada muda: a fila espera.
    O token fica só neste aparelho (localStorage). Nada de dado em URL; o token vai no cabeçalho Authorization.
-   criar({store, armazem, rede, familia, api}) devolve o motor; no navegador, window.DiarioSync.motor() usa o padrão. */
+   criar({store, armazem, rede, familia, api, nativo?}) devolve o motor; no navegador, window.DiarioSync.motor() usa o padrão. */
 (function (root) {
   'use strict';
   var CHAVE = 'diario-saude:conexao';
@@ -17,6 +17,11 @@
     function gravar(c) { armazem.setItem(CHAVE, JSON.stringify(c)); }
     function mudar(fn) { var c = ler(); fn(c); gravar(c); return c; }
     function conectado() { var c = ler(); return !!(c.token && !c.desconectado); }
+    /* App Android (window.AtlasNativo): o vigia usa o mesmo token deste aparelho — um convite só. */
+    function entregarAoApp() {
+      var c = ler();
+      if (o.nativo && c.token && !c.desconectado) { try { o.nativo.usarToken(c.token); } catch (e) { /* app antigo: ignora */ } }
+    }
 
     async function pedir(caminho, corpo, comToken) {
       if (!api) throw new Error('O servidor da família ainda não está configurado.');
@@ -94,6 +99,7 @@
     function sincronizar() {
       if (!conectado()) return Promise.resolve({ novos: 0, pulou: true });
       if (rodando) return rodando;
+      entregarAoApp();
       rodando = (async function () {
         var total = 0;
         try {
@@ -110,6 +116,7 @@
 
     async function guardarConexao(d) {
       gravar({ token: d.token, aparelhoId: d.aparelhoId, papel: d.papel, responsavel: !!d.responsavel, marca: 0, familiaVersao: 0, fotoVersao: 0 });
+      entregarAoApp();
       var f = F.ler(armazem);
       if (F.pessoa(f, d.papel)) { f.esteCelular = d.papel; F.gravar(armazem, f); }
     }
@@ -171,7 +178,7 @@
     var unico = null;
     api.motor = function () {
       if (!unico) unico = criar({ store: root.DiarioDB.criarStore(root.DiarioDB.criarIndexedDB('diario-saude')), armazem: root.localStorage,
-        rede: root.fetch.bind(root), familia: root.DiarioFamilia, api: root.DIARIO_API || '' });
+        rede: root.fetch.bind(root), familia: root.DiarioFamilia, api: root.DIARIO_API || '', nativo: root.AtlasNativo || null });
       return unico;
     };
   }
