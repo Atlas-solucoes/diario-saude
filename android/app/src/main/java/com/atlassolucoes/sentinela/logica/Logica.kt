@@ -162,6 +162,9 @@ object Mensagens {
     fun listaMudou(): String = "Atlas Saude: a lista de quem recebe os alertas mudou. Confira no app Atlas Saude."
     fun teto(): String = "Atlas Saude: limite diario de SMS do Sentinela atingido. Os alarmes continuam no app Abbott. Abra o app."
     fun teste(): String = "Atlas Saude: teste do Sentinela. Se voce recebeu, esta tudo certo."
+    /** Botão "Não estou bem" (celular da paciente). Mesmo texto do site (emergencia.js). */
+    fun emergencia(hora: String): String = "Atlas Saude: EMERGENCIA. Ela apertou \"Nao estou bem\" as $hora. Ligue para ela agora."
+    fun estouBem(hora: String): String = "Atlas Saude: ela avisou que esta bem agora ($hora)."
 }
 
 /** Freios contra SMS demais: mesmo tipo não repete em 10 min; até 6 eventos de alarme por hora; teto de SMS por dia.
@@ -287,4 +290,10 @@ object PonteRegras {
         val limpo = (n ?: "").replace(Regex("[^A-Za-z0-9._-]"), "-").trim('-', '.').take(80)
         return limpo.ifEmpty { "atlas-saude" }
     }
+}
+
+/* ---------- Emergência: trava contra repetição (puro, testado) ---------- */
+object Emergencia {
+    const val ESPERA_MS = 120_000L
+    fun podePedir(ultimoMs: Long, agoraMs: Long): Boolean = ultimoMs == 0L || agoraMs - ultimoMs >= ESPERA_MS
 }

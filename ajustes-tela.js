@@ -41,6 +41,7 @@
     if (!m || !m.conectado()) return Promise.resolve();
     return m.sincronizar().then(function (r) {
       if (r && r.novos && location.hash.indexOf('#/dia') === 0) window.dispatchEvent(new HashChangeEvent('hashchange'));
+      if (r && r.novos) window.dispatchEvent(new Event('diario-sincronizou'));
     }).catch(function () {});
   }
   var relogio = null;
@@ -203,6 +204,7 @@
       var li = el('li');
       li.appendChild(el('span', f.emoji + ' ' + f.apelido, { 'class': 'quem-nome' }));
       var info = [f.anota ? '✍️ anota no app' : '👀 só recebe'];
+      if (f.paciente) info.unshift('🩺 paciente');
       if (f.telefone) info.push('📞 ' + F.mostrarTelefone(f.telefone));
       li.appendChild(el('p', info.join(' · '), { 'class': 'dica' }));
       var acoes = el('div', '', { 'class': 'linha' });
@@ -242,8 +244,12 @@
     var anota = el('input', '', { type: 'checkbox' }); anota.checked = f ? f.anota : true;
     rot.appendChild(anota); rot.appendChild(document.createTextNode('Anota no app (tem o app no celular)'));
     box.appendChild(rot);
+    var rp = el('label', '', { 'class': 'chave' });
+    var pac = el('input', '', { type: 'checkbox' }); pac.checked = !!(f && f.paciente);
+    rp.appendChild(pac); rp.appendChild(document.createTextNode('🩺 É a paciente (quem a gente cuida): no celular dela aparece o botão "Não estou bem"'));
+    box.appendChild(rp);
     box.appendChild(botao(f ? 'Guardar' : '➕ Incluir', 'principal', function () {
-      try { aoSalvar({ apelido: ap.value, emoji: em, telefone: tel.value, anota: anota.checked }); } catch (e) { dizer(e.message); }
+      try { aoSalvar({ apelido: ap.value, emoji: em, telefone: tel.value, anota: anota.checked, paciente: pac.checked }); } catch (e) { dizer(e.message); }
     }));
     return box;
   }

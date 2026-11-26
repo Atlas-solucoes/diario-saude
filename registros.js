@@ -66,6 +66,12 @@
     ] },
     /* T-0035-1: só anota o que já foi aplicado. A unidade (U) é gravada junto, sem pedir toque.
        T-0036-1: nenhum campo é obrigatório; vários registros por dia, cada um com data e hora. */
+    // Não é botão da tela inicial (fica fora de TIPOS): só o "🆘 Não estou bem" do celular da paciente grava este tipo.
+    emergencia: { nome: 'Pedido de ajuda', icone: '🆘', pergunta: 'Pedido de ajuda (botão Não estou bem)', campos: [
+      { id: 'estado', rotulo: 'O que aconteceu', curto: 'estado', tipo: 'escolha', obrigatorio: true,
+        opcoes: [['pediu', 'Pediu ajuda: não está bem'], ['bem', 'Avisou que está bem agora']] },
+      { id: 'avisados', rotulo: 'Pessoas avisadas por SMS', curto: 'avisados', tipo: 'numero', min: 0, max: 20 }
+    ] },
     insulina: { nome: 'Insulina', icone: '💉', pergunta: 'Anotar a insulina que foi aplicada (tudo opcional)', campos: [
       { id: 'qual', rotulo: 'Qual insulina?', tipo: 'lista' },
       { id: 'quantidade', rotulo: 'Quantas unidades (U)?', curto: 'quantidade', tipo: 'numero', decimal: true,
@@ -84,7 +90,7 @@
   };
   var TIPOS = ['alimentacao', 'exercicio', 'emocao', 'sono', 'diferente', 'nausea', 'tontura', 'pressao', 'insulina', 'glicose'];
   // Tipos que podem ser GRAVADOS (igual a db.js, worker e nucleo.js; um teste confere): os de cima + os botões criados.
-  var TIPOS_GRAVADOS = TIPOS.concat(['personalizado']);
+  var TIPOS_GRAVADOS = TIPOS.concat(['personalizado', 'emergencia']);
 
   /* Botões criados pela família (tipo 'personalizado'): o esquema vem do documento da família (familia.js).
      No navegador, lê do aparelho; em teste, usarFonteBotoes(fn) troca a fonte. */

@@ -158,4 +158,15 @@ class LogicaTest {
         assertEquals("a-b-c.pdf", PonteRegras.nomeArquivo("../a/b c.pdf").trimStart('-'))
         assertEquals("atlas-saude", PonteRegras.nomeArquivo(""))
     }
+
+    @Test fun emergenciaTextoETrava() {
+        for (t in listOf(Mensagens.emergencia("14:32"), Mensagens.estouBem("14:50"))) {
+            assertTrue(t, t.length <= 160)
+            assertTrue(t, t.all { it.code in 32..126 })
+        }
+        assertEquals("Atlas Saude: EMERGENCIA. Ela apertou \"Nao estou bem\" as 14:32. Ligue para ela agora.", Mensagens.emergencia("14:32"))
+        assertTrue(Emergencia.podePedir(0L, 5L))
+        assertFalse(Emergencia.podePedir(1000L, 61_000L))
+        assertTrue(Emergencia.podePedir(1000L, 121_000L))
+    }
 }

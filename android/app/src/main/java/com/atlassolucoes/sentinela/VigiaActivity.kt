@@ -71,6 +71,11 @@ class VigiaActivity : Activity() {
         if (tentouNotif && !temAcessoNotificacoes(this)) a.negadoNotif = true
         tentouNotif = false
         desenhar()
+        // ao abrir o Vigia, busca a configuração da família (sem esperar os 15 min) e redesenha
+        if (a.vigiaAtivo && a.token != null) Thread {
+            try { Servidor.atualizarConfig(applicationContext) } catch (e: Exception) { }
+            principal.post { if (!isFinishing) desenhar() }
+        }.start()
     }
 
     /* ---------- desenho ---------- */
@@ -238,7 +243,13 @@ class VigiaActivity : Activity() {
         val ult = a.ultimaLeitura()
         info.addView(linhaInfo("🩸", "Última leitura vista", ult?.let { "${it.first.valor} mg/dL às ${hora(it.second)}" } ?: "nenhuma ainda"))
         info.addView(linhaInfo("🚨", "Último alarme repassado", a.ultimoRepasse.ifEmpty { "nenhum ainda" }))
-        info.addView(linhaInfo("💚", "\"Tudo funcionando\"", if (cfg == null || cfg.vidaHoras == 0) "desligado" else "a cada ${cfg.vidaHoras} h"))
+        val vida = cfg?.let { c -> c.pessoas.filter { it.id in c.vida && it.telefone.isNotEmpty() }.map { it.apelido } }.orEmpty()
+        info.addView(linhaInfo("💚", "\"Tudo funcionando\"", when {
+            cfg == null || cfg.vidaHoras == 0 -> "desligado"
+            vida.isEmpty() -> "a cada ${cfg.vidaHoras} h, mas ninguém marcado para receber"
+            else -> "a cada ${cfg.vidaHoras} h para " + vida.joinToString(", ")
+        }))
+        info.addView(linhaInfo("🔄", "Configuração recebida", if (a.configMs == 0L) "ainda não" else "às ${hora(a.configMs)} de ${java.text.SimpleDateFormat("dd/MM", java.util.Locale("pt", "BR")).format(java.util.Date(a.configMs))}"))
         caixa.addView(info, lp(12))
 
         if (a.aviso.isNotEmpty()) caixa.addView(cartao(Cores.AMBAR_CLARO, Cores.DOURADO).apply {

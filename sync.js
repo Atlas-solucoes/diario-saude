@@ -85,11 +85,19 @@
       for (var j = 0; j < (resp.rejeitados || []).length; j++) if (resp.rejeitados[j].id) await store.marcarRejeitado(resp.rejeitados[j].id, resp.rejeitados[j].erro);
       var novos = 0;
       for (var k = 0; k < (resp.registros || []).length; k++) if (await store.aplicarRemoto(resp.registros[k])) novos++;
-      if (resp.familia) aplicarFamilia(resp.familia.doc);
+      // Responsável com edição da família ainda não aceita pelo servidor: NUNCA aplica o documento do servidor por cima
+      // (foi assim que "quem recebe os alertas" sumiu em 25/11). E nunca aplica versão mais velha que a local.
+      var suja = ler().responsavel && !!ler().familiaSuja;
+      var usarFamilia = resp.familia && !suja && resp.familia.versao > (ler().familiaVersao || 0);
+      if (usarFamilia) {
+        aplicarFamilia(resp.familia.doc);
+        // app Android: o vigia busca a configuração nova na hora (não espera os 15 min)
+        if (o.nativo && o.nativo.configMudou) { try { o.nativo.configMudou(); } catch (e) { /* app antigo */ } }
+      }
       if (resp.foto) await aplicarFoto(resp.foto);
       mudar(function (x) {
         if (typeof resp.marca === 'number') x.marca = resp.marca;
-        if (resp.familia) x.familiaVersao = resp.familia.versao;
+        if (usarFamilia) x.familiaVersao = resp.familia.versao;
         if (resp.foto) x.fotoVersao = resp.foto.versao;
       });
       return { novos: novos, mais: !!resp.mais || fila.length === LOTE };
@@ -104,6 +112,7 @@
         var total = 0;
         try {
           for (var v = 0; v < MAX_VOLTAS; v++) { var r = await umaVolta(); total += r.novos; if (!r.mais) break; }
+          if (ler().responsavel && ler().familiaSuja) await enviarFamilia(); // edição que ficou sem subir (ex.: sem internet)
           mudar(function (c) { c.ultimo = new Date().toISOString(); c.erro = ''; });
           return { novos: total };
         } catch (e) {
@@ -112,6 +121,35 @@
         } finally { rodando = null; }
       })();
       return rodando;
+    }
+
+    /* Só o responsável sobe a família (apelidos, botões, mensagens; nunca a foto aqui, nunca "este celular é de").
+       Um envio por vez, sempre com o documento local MAIS NOVO; "familiaSuja" só limpa quando o servidor aceitou
+       exatamente aquela edição. Sem isso, a rede fora de ordem fazia a versão velha vencer. */
+    var envioFamilia = null, maisUmEnvio = false;
+    function enviarFamilia() {
+      var c = ler();
+      if (!c.responsavel || !conectado()) return Promise.resolve();
+      mudar(function (x) { x.familiaSuja = (x.familiaSuja || 0) + 1; });
+      if (envioFamilia) { maisUmEnvio = true; return envioFamilia; }
+      envioFamilia = (async function () {
+        try { do { maisUmEnvio = false; await enviarFamiliaUmaVez(); } while (maisUmEnvio); }
+        finally { envioFamilia = null; }
+      })();
+      return envioFamilia;
+    }
+    async function enviarFamiliaUmaVez() {
+      var marcaEdicao = ler().familiaSuja;
+      var f = F.ler(armazem);
+      var doc = { acompanhada: { apelido: f.acompanhada.apelido, emoji: f.acompanhada.emoji }, familia: f.familia,
+        botoes: f.botoes, ocultos: f.ocultos, botoesPersonalizados: f.botoesPersonalizados, mensagens: f.mensagens };
+      var r = await pedir('/api/familia', { doc: doc, versao: (ler().familiaVersao || 0) + 1 }, true);
+      // Responsável novo (código trocado) começa da versão 0: o servidor ignora e conta a dele; reenvia uma vez acima dela.
+      if (!r.aceito) r = await pedir('/api/familia', { doc: doc, versao: r.versao + 1 }, true);
+      mudar(function (x) {
+        x.familiaVersao = Math.max(x.familiaVersao || 0, r.versao);
+        if (r.aceito !== false && x.familiaSuja === marcaEdicao) x.familiaSuja = 0;
+      });
     }
 
     async function guardarConexao(d) {
@@ -131,7 +169,7 @@
       virarResponsavel: async function (codigo, papel, nome) {
         var d = await pedir('/api/responsavel', { codigo: codigo, papel: papel, nome: nome }, false);
         await guardarConexao(d);
-        await this.enviarFamilia();
+        await enviarFamilia();
         await this.enviarFoto();
         return d;
       },
@@ -143,19 +181,7 @@
       convidar: function (papel) { return pedir('/api/convites', { papel: papel }, true); },
       aparelhos: async function () { return (await pedir('/api/aparelhos', {}, true)).aparelhos; },
       revogar: function (id) { return pedir('/api/aparelhos/revogar', { id: id }, true); },
-      /* Só o responsável: sobe apelidos/emojis (nunca a foto aqui, nunca "este celular é de"). */
-      enviarFamilia: async function () {
-        var c = ler();
-        if (!c.responsavel || !conectado()) return;
-        var f = F.ler(armazem);
-        var v = (c.familiaVersao || 0) + 1;
-        var doc = { acompanhada: { apelido: f.acompanhada.apelido, emoji: f.acompanhada.emoji }, familia: f.familia,
-          botoes: f.botoes, ocultos: f.ocultos, botoesPersonalizados: f.botoesPersonalizados, mensagens: f.mensagens };
-        var r = await pedir('/api/familia', { doc: doc, versao: v }, true);
-        // Responsável novo (código trocado) começa da versão 0: o servidor ignora e conta a dele; reenvia uma vez acima dela.
-        if (!r.aceito) r = await pedir('/api/familia', { doc: doc, versao: r.versao + 1 }, true);
-        mudar(function (x) { x.familiaVersao = r.versao; });
-      },
+      enviarFamilia: enviarFamilia,
       enviarFoto: async function () {
         var c = ler();
         if (!c.responsavel || !conectado()) return;

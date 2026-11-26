@@ -184,6 +184,11 @@
     var fc = DiarioFamilia.atual();
     cuida.appendChild(el('span', fc.acompanhada.apelido ? 'Cuidando de ' + fc.acompanhada.apelido : 'Toque aqui para pôr o apelido e a foto de quem a gente cuida'));
     tela.appendChild(cuida);
+    var faixa = el('div'); tela.appendChild(faixa); // 🆘 pedido de ajuda de hoje (todos os celulares)
+    var EM = window.DiarioEmergencia;
+    var ehPaciente = EM && DiarioFamilia.esteCelularEhPaciente(fc);
+    if (ehPaciente) tela.appendChild(EM.blocoPaciente(ctxEmergencia(fc)));
+    if (window.AtlasNativo && window.AtlasNativo.atalhoEmergencia) { try { window.AtlasNativo.atalhoEmergencia(!!ehPaciente); } catch (e) { /* app antigo */ } }
     tela.appendChild(blocoFalar());
     tela.appendChild(el('h2', 'O que você quer anotar?'));
     var g = el('div', '', { 'class': 'grade' });
@@ -196,10 +201,62 @@
         if (bt.personalizado) telaForm('personalizado', null, hojeLocal(), null, bt.id);
         else telaForm(bt.id, null, hojeLocal());
       });
+      // sinal: o último registro de HOJE deste botão (hora e quem), preenchido logo abaixo
+      var sinal = el('span', '', { 'class': 'sinal' });
+      sinal.dataset.chave = bt.personalizado ? 'p:' + bt.id : bt.id;
+      b.appendChild(sinal);
       g.appendChild(b);
     });
     tela.appendChild(g);
     tela.appendChild(blocoAjustesVoz());
+    pintarSinais(g, faixa);
+  }
+
+  /* Sinal nos botões + faixa de pedido de ajuda: lê os registros (os da família chegam pela sincronização). */
+  function pintarSinais(grade, faixa) {
+    var EM = window.DiarioEmergencia;
+    if (!EM) return;
+    store.listarTodos().then(function (lista) {
+      var fc = DiarioFamilia.atual();
+      var nome = function (id) { return DiarioFamilia.rotuloTexto(fc, id); };
+      var s = EM.sinaisDeHoje(lista, hojeLocal(), nome);
+      Array.prototype.forEach.call(grade.querySelectorAll('.sinal'), function (x) {
+        var v = s[x.dataset.chave];
+        x.textContent = v ? '✓ ' + v.hora + ' · ' + v.quem : '';
+        x.parentNode.classList.toggle('feito-hoje', !!v);
+      });
+      while (faixa.firstChild) faixa.removeChild(faixa.firstChild);
+      var f = EM.faixaDeHoje(EM.emergenciaDeHoje(lista, hojeLocal(), nome));
+      if (f) faixa.appendChild(f);
+    }).catch(function () {});
+  }
+  // chegou registro novo da família: repinta os sinais se estiver na tela inicial
+  window.addEventListener('diario-sincronizou', function () {
+    var h = location.hash || '#/inicio';
+    if (h === '#/inicio' || h === '#/' || h === '#') rotear();
+  });
+
+  function ctxEmergencia(fc) {
+    return {
+      F: DiarioFamilia, familia: fc,
+      salvarRegistro: function (dados, iso) {
+        return store.adicionar({ tipo: 'emergencia', dataHora: iso, pessoa: fc.esteCelular, dados: dados })
+          .then(function () { DiarioAjustesTela.sincronizarQuieto(); }).catch(function (e) { dizer('Não anotou no diário: ' + e.message); });
+      },
+      aoFechar: function () { irPara('#/inicio'); }
+    };
+  }
+
+  /* Atalho do ícone (app Android): só o botão de segurar, grande. */
+  function telaEmergencia() {
+    limpar();
+    var fc = DiarioFamilia.atual();
+    if (!window.DiarioEmergencia || !DiarioFamilia.esteCelularEhPaciente(fc)) {
+      tela.appendChild(el('p', 'O botão "Não estou bem" fica só no celular da paciente (Ajustes → Família → 🩺 É a paciente).', { 'class': 'alerta' }));
+      return;
+    }
+    tela.appendChild(el('h2', 'Pedir ajuda'));
+    tela.appendChild(window.DiarioEmergencia.blocoPaciente(ctxEmergencia(fc)));
   }
 
   /* Botões grandes de escolha. Selecionado = fundo escuro + "✓" (não depende só de cor). Tocar de novo desmarca (se não obrigatório). */
@@ -468,6 +525,7 @@
     if (ajustes) DiarioAjustesTela.mostrar(h.split('/')[2] || '');
     else if (h === '#/estatisticas') DiarioEstatisticasTela.mostrar();
     else if (h === '#/relatorio') DiarioRelatorioTela.mostrar();
+    else if (h === '#/emergencia') telaEmergencia();
     else if (m) telaDia(m[1] || hojeLocal()).catch(function (e) { dizer('Erro: ' + e.message); });
     else telaInicio();
   }

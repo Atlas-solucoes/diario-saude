@@ -51,7 +51,7 @@ class MainActivity : Activity() {
                 if (PonteRegras.origemPermitida(url)) return false
                 // fora do nosso site: abre no navegador (só http/https/tel/mailto), nunca dentro do app
                 val esquema = req.url.scheme ?: ""
-                if (esquema in listOf("https", "http", "tel", "mailto")) {
+                if (esquema in listOf("https", "http", "tel", "mailto", "sms")) {
                     try { startActivity(Intent(Intent.ACTION_VIEW, req.url)) } catch (e: Exception) { }
                 }
                 return true
@@ -75,7 +75,8 @@ class MainActivity : Activity() {
         }
 
         if (savedInstanceState != null) web.restoreState(savedInstanceState)
-        if (web.url == null) web.loadUrl(PonteRegras.SITE)
+        if (intent?.action == ACAO_EMERGENCIA) web.loadUrl(PonteRegras.SITE + "#/emergencia")
+        else if (web.url == null) web.loadUrl(PonteRegras.SITE)
     }
 
     override fun onResume() {
@@ -83,6 +84,11 @@ class MainActivity : Activity() {
         web.onResume()
         // volta do Vigia/Configurações: o site atualiza o ✅/⚠️ do item Vigia
         web.evaluateJavascript("window.dispatchEvent(new Event('atlasnativo'))", null)
+    }
+
+    override fun onNewIntent(novo: Intent) {
+        super.onNewIntent(novo)
+        if (novo.action == ACAO_EMERGENCIA) web.loadUrl(PonteRegras.SITE + "#/emergencia")
     }
 
     override fun onPause() { web.onPause(); super.onPause() }
@@ -106,6 +112,7 @@ class MainActivity : Activity() {
 
     companion object {
         private const val ESCOLHER = 7
+        const val ACAO_EMERGENCIA = "com.atlassolucoes.sentinela.EMERGENCIA"
         private val PAGINA_SEM_INTERNET = """
             <html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head>
             <body style="font-family:sans-serif;background:#F4F8FB;color:#12212B;text-align:center;padding:48px 24px">

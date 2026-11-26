@@ -98,3 +98,29 @@ a.voltar { display: inline-flex; align-items: center; min-height: 48px; margin-b
 button.seta { min-width: 56px; font-size: 22px; }
 .botoes-lista li.oculto .quem-nome { opacity: .6; }
 .previa { font-size: 18px; background: #eef6fb; border-radius: 12px; padding: 10px; }
+
+/* Sinal nos botões: o que já foi feito hoje e por quem */
+button.tipo .sinal { font-size: 14px; font-weight: 700; color: #1e5e3b; min-height: 1em; }
+button.tipo.feito-hoje { border-color: #1e7b4f; background: #e3f4ea; }
+/* 🆘 Não estou bem (só no celular da paciente): segurar 2 s */
+.sos-caixa { margin: 8px 0 18px; }
+button.sos { position: relative; overflow: hidden; width: 100%; min-height: 104px; background: #b3261e; border: 3px solid #7a1712; color: #fff;
+  font-size: 26px; font-weight: 800; border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+button.sos .sos-texto, button.sos .sos-dica { position: relative; z-index: 1; }
+button.sos .sos-dica { font-size: 16px; font-weight: 600; opacity: .9; }
+button.sos .sos-anel { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: rgba(255,255,255,.28); }
+button.sos.segurando .sos-anel { width: 100%; transition: width 2s linear; }
+.sos-capa { position: fixed; inset: 0; z-index: 50; background: #7a1712; color: #fff; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 18px; padding: 24px; text-align: center; overflow-y: auto; }
+.sos-capa.sos-depois { background: #0e2c5e; }
+.sos-titulo { font-size: 26px; font-weight: 800; margin: 0; }
+.sos-numero { font-size: 120px; font-weight: 900; margin: 0; line-height: 1; }
+.sos-motivo { font-size: 18px; margin: 0; }
+button.sos-cancelar { width: 100%; max-width: 420px; min-height: 96px; font-size: 32px; font-weight: 900; background: #fff; color: #7a1712; border-color: #fff; }
+a.sos-ligar { display: block; width: 100%; max-width: 420px; padding: 20px; border-radius: 18px; background: #fff; color: #0e2c5e; font-size: 24px;
+  font-weight: 800; text-decoration: none; }
+button.sos-bem { width: 100%; max-width: 420px; min-height: 80px; font-size: 24px; font-weight: 800; background: #e3f4ea; color: #1e5e3b; border-color: #1e7b4f; }
+.sos-capa button.secundario { max-width: 420px; }
+.sos-faixa { background: #fde2e1; border: 2px solid #b3261e; color: #5c0f0b; border-radius: 14px; padding: 12px 14px; font-size: 19px; font-weight: 800; }
+.sos-faixa.ok { background: #e3f4ea; border-color: #1e7b4f; color: #1e5e3b; }

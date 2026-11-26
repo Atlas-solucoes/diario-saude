@@ -66,6 +66,9 @@ class Armazem(ctx: Context) {
     var negadoNotif: Boolean get() = p.getBoolean("negadoNotif", false); set(v) { p.edit().putBoolean("negadoNotif", v).apply() }
     var negadoSms: Boolean get() = p.getBoolean("negadoSms", false); set(v) { p.edit().putBoolean("negadoSms", v).apply() }
     var pediuSms: Boolean get() = p.getBoolean("pediuSms", false); set(v) { p.edit().putBoolean("pediuSms", v).apply() }
+    /** Último "Não estou bem" enviado (trava de 2 min) e quando a configuração chegou por último (mostrado no painel). */
+    var emergenciaMs: Long get() = p.getLong("emergenciaMs", 0L); set(v) { p.edit().putLong("emergenciaMs", v).apply() }
+    var configMs: Long get() = p.getLong("configMs", 0L); set(v) { p.edit().putLong("configMs", v).apply() }
 
     fun config(): Config? = configJson?.let { LeitorConfig.ler(it) }
 
@@ -152,6 +155,7 @@ object Servidor {
             val nova = LeitorConfig.ler(txt) ?: return "A família ainda não salvou a configuração das mensagens."
             val antiga = a.config()
             a.configJson = txt
+            a.configMs = System.currentTimeMillis()
             // aviso velho ("ninguém marcado", "configuração não baixada") não fica pendurado depois de corrigido
             if (nova.telefonesAlerta().isNotEmpty() && a.aviso.startsWith("Alarme visto")) a.aviso = ""
             if (LeitorConfig.mudouQuemRecebe(antiga, nova)) {

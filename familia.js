@@ -51,7 +51,7 @@
   }
   function normPessoa(f) {
     return { id: f.id, apelido: texto(f.apelido, 30) || f.id, emoji: texto(f.emoji, 8) || '🧑',
-      telefone: normTelefone(f.telefone), anota: f.anota !== false };
+      telefone: normTelefone(f.telefone), anota: f.anota !== false, paciente: f.paciente === true };
   }
   function normPergunta(q) {
     if (!q || !ID_PERGUNTA.test(q.id) || TIPOS_PERGUNTA.indexOf(q.tipo) < 0) return null;
@@ -107,6 +107,8 @@
     }).map(normPessoa) : p.familia.map(normPessoa);
     if (!fam.some(function (f) { return f.anota; })) fam = fam.length ? fam : p.familia.map(normPessoa);
     if (!fam.some(function (f) { return f.anota; })) fam[0].anota = true; // sempre fica 1 pessoa que anota
+    var achou = false; // no máximo 1 paciente (perfil de quem a gente cuida; o nome continua o apelido dela)
+    fam.forEach(function (f) { if (f.paciente) { if (achou) f.paciente = false; achou = true; } });
     var anotam = fam.filter(function (f) { return f.anota; }).map(function (f) { return f.id; });
     var bp = (Array.isArray(c.botoesPersonalizados) ? c.botoesPersonalizados : []).map(normBotao).filter(Boolean);
     var vivos = bp.filter(function (b) { return !b.apagado; });
@@ -237,6 +239,7 @@
       if (tel !== undefined) f.telefone = normTelefone(tel);
       if (campos.anota !== undefined) f.anota = campos.anota !== false;
     });
+    if (campos.paciente !== undefined) n.familia.forEach(function (f) { f.paciente = campos.paciente === true ? f.id === id : (f.id === id ? false : f.paciente); });
     if (!n.familia.some(function (f) { return f.anota; })) throw new Error('Pelo menos uma pessoa precisa anotar no app.');
     return normalizar(n);
   }
@@ -259,7 +262,8 @@
     if (tel && !normTelefone(tel)) throw new Error('Telefone inválido. Use DDD + celular, ex.: (48) 9 9999-9999.');
     var n = normalizar(c);
     var id = novoId(n.familia.map(function (f) { return f.id; }));
-    n.familia.push({ id: id, apelido: ap, emoji: texto(emoji, 8) || '🧑', telefone: normTelefone(tel), anota: extras.anota !== false });
+    if (extras.paciente === true) n.familia.forEach(function (f) { f.paciente = false; });
+    n.familia.push({ id: id, apelido: ap, emoji: texto(emoji, 8) || '🧑', telefone: normTelefone(tel), anota: extras.anota !== false, paciente: extras.paciente === true });
     return normalizar(n);
   }
   function renomear(c, id, apelido, emoji) {
@@ -304,12 +308,21 @@
   /* Texto para tela (com emoji) e para o PDF (sem emoji, porque a fonte do PDF não tem). */
   function rotulo(c, id) { var p = pessoa(c, id); return p ? p.emoji + ' ' + p.apelido : 'Alguém que saiu'; }
   function rotuloTexto(c, id) { var p = pessoa(c, id); return p ? semEmoji(p.apelido) || p.apelido : 'Alguém que saiu'; }
+  /* Perfil paciente: quem é, e se ESTE celular é o dela (aí aparece o botão "Não estou bem"). */
+  function paciente(c) { var n = normalizar(c); for (var i = 0; i < n.familia.length; i++) if (n.familia[i].paciente) return n.familia[i]; return null; }
+  function esteCelularEhPaciente(c) { var n = normalizar(c), p = paciente(n); return !!(p && n.esteCelular === p.id); }
+  /* Quem recebe os alertas (e portanto a emergência): [{id, apelido, telefone}] */
+  function recebemAlertas(c) {
+    var n = normalizar(c);
+    return n.familia.filter(function (f) { return f.telefone && n.mensagens.recebem[f.id] && n.mensagens.recebem[f.id].alertas; })
+      .map(function (f) { return { id: f.id, apelido: semEmoji(f.apelido) || f.apelido, telefone: f.telefone }; });
+  }
   function nomeAcompanhada(c) { var a = normalizar(c).acompanhada; return a.apelido || 'quem a gente cuida'; }
 
   var api = { CHAVE: CHAVE, EMOJIS_FAMILIA: EMOJIS_FAMILIA, EMOJIS_CUIDADO: EMOJIS_CUIDADO,
     EMOJIS_BOTAO: EMOJIS_BOTAO, LIM: LIM, VIDA_HORAS: VIDA_HORAS, TIPOS_PERGUNTA: TIPOS_PERGUNTA,
     padrao: padrao, normalizar: normalizar, ler: ler, gravar: gravar, adicionar: adicionar, renomear: renomear,
-    remover: remover, pessoa: pessoa, rotulo: rotulo, rotuloTexto: rotuloTexto, nomeAcompanhada: nomeAcompanhada,
+    remover: remover, pessoa: pessoa, rotulo: rotulo, rotuloTexto: rotuloTexto, nomeAcompanhada: nomeAcompanhada, paciente: paciente, esteCelularEhPaciente: esteCelularEhPaciente, recebemAlertas: recebemAlertas,
     normTelefone: normTelefone, mostrarTelefone: mostrarTelefone, editarPessoa: editarPessoa, quemAnota: quemAnota,
     listaBotoes: listaBotoes, moverBotao: moverBotao, mostrarBotao: mostrarBotao, botaoPersonalizado: botaoPersonalizado,
     salvarBotao: salvarBotao, apagarBotao: apagarBotao, esquemaDoBotao: esquemaDoBotao, semEmoji: semEmoji,
