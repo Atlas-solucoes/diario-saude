@@ -138,7 +138,10 @@
     if (n) { try { res = JSON.parse(estado === 'pediu' ? n.emergencia() : n.estouBem()); } catch (e) { res = null; } }
     if (res && res.espera) { telaDepois(ctx, null, 'espera'); return; } // o app já mandou há menos de 2 min
     var avisados = 0;
+    // App Android antigo (sem a função de emergência): ele não abre link de SMS. Não fingir que avisou: só ligar.
+    var appAntigo = !!(root.AtlasNativo && !n);
     if (res && res.ok) avisados = res.avisados || 0;
+    else if (appAntigo) { res = { ok: false, motivo: 'Este app precisa ser atualizado para mandar o SMS. LIGUE para a família agora:' }; }
     else if (quem.length) {
       // plano B: abre o app de SMS com o texto e os números (ela só toca em enviar)
       location.href = linkSms(quem.map(function (q) { return q.telefone; }), estado === 'pediu' ? textoPedido(hora) : textoBem(hora));
@@ -155,8 +158,10 @@
     var capa = el('div', '', { 'class': 'sos-capa sos-depois', role: 'dialog' });
     var titulo;
     if (estado === 'espera') titulo = 'Você já pediu ajuda há pouco. A família já foi avisada. Ligue se precisar:';
-    else if (estado === 'bem') titulo = '💚 Avisamos que você está bem (' + hora + ').';
+    else if (estado === 'bem') titulo = (res && !res.ok) || !quem.length ? '💚 Anotado no diário (' + hora + '). O SMS não saiu: avise a família por telefone.'
+      : '💚 Avisamos que você está bem (' + hora + ').';
     else if (res && res.ok) titulo = '📨 Avisamos ' + quem.map(function (q) { return q.apelido; }).join(', ') + ' às ' + hora + '.';
+    else if (res && res.motivo && /atualizado/.test(res.motivo)) titulo = '⚠️ O SMS NÃO saiu.';
     else if (quem.length) titulo = '📨 Abrimos o SMS pronto: toque em ENVIAR. Depois, se puder, ligue:';
     else titulo = '⚠️ Ninguém está marcado para receber. Ligue para alguém da família agora.';
     capa.appendChild(el('p', titulo, { 'class': 'sos-titulo' }));
