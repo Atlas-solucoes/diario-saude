@@ -8,7 +8,7 @@
    Regra de ouro: o servidor só guarda e devolve. Não calcula, não classifica, não sugere. */
 import regras from './regras.cjs';
 
-const TIPOS = ['alimentacao', 'exercicio', 'emocao', 'sono', 'diferente', 'nausea', 'tontura', 'pressao', 'insulina', 'glicose', 'personalizado'];
+const TIPOS = ['alimentacao', 'exercicio', 'emocao', 'sono', 'diferente', 'nausea', 'tontura', 'pressao', 'insulina', 'glicose', 'personalizado', 'emergencia'];
 const ID_RE = /^[A-Za-z0-9-]{8,80}$/;
 const ID_PESSOA = /^[a-z0-9_-]{1,40}$/;
 const LOTE_MAX = 200;
@@ -71,6 +71,11 @@ export function validarDados(tipo, d) {
     if (!inteiro(d.valor, 20, 600)) return 'glicose: use um número inteiro de 20 a 600';
     if (d.momento !== undefined && !emLista(d.momento, ['antes', 'depois'])) return 'glicose: momento inválido';
     if (d.origem !== undefined && !emLista(d.origem, ['sensor', 'dedo', 'nao_sei'])) return 'glicose: origem inválida';
+  } else if (tipo === 'emergencia') {
+    // Botão "Não estou bem" (só no celular da paciente): pediu ajuda ou avisou que está bem.
+    if (!so(d, ['estado', 'avisados'])) return 'emergência: campo não aceito';
+    if (!emLista(d.estado, ['pediu', 'bem'])) return 'emergência: estado inválido';
+    if (d.avisados !== undefined && !inteiro(d.avisados, 0, 20)) return 'emergência: avisados inválido';
   } else if (tipo === 'personalizado') {
     // Botão criado pela família: o esquema está no documento da família; aqui só a forma segura dos dados.
     if (typeof d.botao !== 'string' || !/^b-[a-z0-9]{6}$/.test(d.botao)) return 'botão inválido';
